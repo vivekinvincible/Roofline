@@ -1,0 +1,27 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Backend: FastAPI",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["main:app", "--reload", "--port", "8001"],
+      "cwd": "${workspaceFolder}/backend"
+    },
+    {
+      "name": "Mobile: Expo Start",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/mobile",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["expo", "start"]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack Launch",
+      "configurations": ["Backend: FastAPI", "Mobile: Expo Start"]
+    }
+  ]
+}

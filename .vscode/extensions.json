@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "ms-python.python",        // Official Python support
+    "ms-python.vscode-pylance", // Faster Python IntelliSense
+    "expo.expo-vscode",        // Expo tools
+    "dsznajder.es7-react-js-snippets", // Rapid React Native coding
+    "esbenp.prettier-vscode",  // Auto-formatting
+    "rangav.vscode-thunder-client" // API testing inside VS Code
+  ]
+}

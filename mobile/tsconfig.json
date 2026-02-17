@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "skipLibCheck": true,
+    "paths": {
+      "@/*": ["./*"]
+    },
+    "types": [
+      "node",
+      "babel__generator",
+      "babel__template",
+      "hammerjs",
+      "istanbul-lib-report",
+      "yargs-parser"
+    ]
+  },
+  "extends": "expo/tsconfig.base",
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ]
+}
