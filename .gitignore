@@ -1,0 +1,17 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# Secrets (IMPORTANT)
+.env
+.env.development
+.env.production
+
+# Alembic
+# We keep the migration scripts, but not the local DB files
+*.db
