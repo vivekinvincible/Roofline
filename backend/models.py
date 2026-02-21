@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import List, Optional
 from datetime import datetime
+from enum import Enum
 
 
 # 1. Create the Join Table (Link Model)
@@ -37,27 +38,64 @@ class FinancialProfile(SQLModel, table=True):
 
     user: User = Relationship(back_populates="financial_profile")
 
+# 1. Define Standard Units
+
+
+class AreaUnit(str, Enum):
+    SQM = "sqm"
+    SQFT = "sqft"
+
+
+class PropertyType(str, Enum):
+    APARTMENT = "apartment"
+    HOUSE = "house"
+    VILLA = "villa"
+    COMMERCIAL = "commercial"
+
 
 class Property(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     title: str
+    property_type: PropertyType = Field(default=PropertyType.APARTMENT)
+
+    # Financials
     price: float
-    country: str
+    currency: str = Field(default="EUR")  # ISO Codes: EUR, AED, USD, GBP
+
+    # Space & Units
+    area: Optional[float] = None
+    area_unit: AreaUnit = Field(default=AreaUnit.SQM)
+
+    # Location
+    country_code: str = Field(index=True)  # "IE", "ES", "AE"
     location_city: str
-    image_url: Optional[str] = None
     latitude: float
     longitude: float
+
+    # Metadata
+    source_url: Optional[str] = None  # Link to the original listing
+    image_url: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    # Added: Link back to User
-    favorited_by: List[User] = Relationship(
-        back_populates="favorites",
-        link_model=UserFavorite
-    )
+    # Relationships
+    favorited_by: List["User"] = Relationship(
+        back_populates="favorites", link_model=UserFavorite)
 
 
 class CountryRule(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    country_code: str = Field(unique=True)  # IE or ES
-    tax_rate: float  # e.g., 0.01 for IE, 0.10 for ES
-    lending_multiplier: float  # e.g., 4.0 for IE
+    country_code: str = Field(unique=True)  # IE, ES, AE, UK
+    country_name: str
+
+    # Currency info for the UI
+    currency_code: str = Field(default="EUR")
+    currency_symbol: str = Field(default="€")
+
+    # Lending Logic
+    lending_multiplier: float  # e.g. 4.0 for Ireland
+    min_down_payment_pct: float = Field(default=0.10)  # 10%, 20% etc.
+
+    # Tax Logic
+    tax_rate_pct: float  # Stamp duty or Transfer tax
+    additional_fees_fixed: float = Field(
+        default=0.0)  # Fixed legal/notary fees
