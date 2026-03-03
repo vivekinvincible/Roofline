@@ -3,13 +3,30 @@ from typing import List, Optional
 from datetime import datetime
 from enum import Enum
 
+# --- ENUMS ---
 
-# 1. Create the Join Table (Link Model)
+
+class AreaUnit(str, Enum):
+    SQM = "sqm"
+    SQFT = "sqft"
+
+
+class PropertyType(str, Enum):
+    APARTMENT = "apartment"
+    HOUSE = "house"
+    VILLA = "villa"
+    COMMERCIAL = "commercial"
+
+# --- LINK TABLES ---
+
+
 class UserFavorite(SQLModel, table=True):
     user_id: Optional[int] = Field(
         default=None, foreign_key="user.id", primary_key=True)
     property_id: Optional[int] = Field(
         default=None, foreign_key="property.id", primary_key=True)
+
+# --- CORE MODELS ---
 
 
 class User(SQLModel, table=True):
@@ -20,7 +37,6 @@ class User(SQLModel, table=True):
     financial_profile: Optional["FinancialProfile"] = Relationship(
         back_populates="user")
 
-    # Updated: Added link_model
     favorites: List["Property"] = Relationship(
         back_populates="favorited_by",
         link_model=UserFavorite
@@ -38,44 +54,49 @@ class FinancialProfile(SQLModel, table=True):
 
     user: User = Relationship(back_populates="financial_profile")
 
-# 1. Define Standard Units
-
-
-class AreaUnit(str, Enum):
-    SQM = "sqm"
-    SQFT = "sqft"
-
-
-class PropertyType(str, Enum):
-    APARTMENT = "apartment"
-    HOUSE = "house"
-    VILLA = "villa"
-    COMMERCIAL = "commercial"
-
 
 class Property(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+
+    # New: Tracking IDs from external sources to prevent duplicates
+    external_id: str = Field(unique=True, index=True)
+    source: str = Field(index=True)  # "idealista" or "daft"
+
     title: str
-    property_type: PropertyType = Field(default=PropertyType.APARTMENT)
+    description: Optional[str] = None
+    property_type: str = Field(default="apartment")
 
     # Financials
     price: float
-    currency: str = Field(default="EUR")  # ISO Codes: EUR, AED, USD, GBP
+    currency: str = Field(default="EUR")
 
-    # Space & Units
+    # Space
     area: Optional[float] = None
     area_unit: AreaUnit = Field(default=AreaUnit.SQM)
+    rooms: Optional[int] = None
+    bathrooms: Optional[int] = None
 
     # Location
-    country_code: str = Field(index=True)  # "IE", "ES", "AE"
-    location_city: str
-    latitude: float
-    longitude: float
+    country_code: str = Field(index=True)  # "IE", "ES"
+    location_city: Optional[str] = None
+    location_province: Optional[str] = None
+    address: Optional[str] = None
+    zip_code: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+    # Multimedia
+    source_url: Optional[str] = None
+    image_url: Optional[str] = None
+    video_url: Optional[str] = None
+    tour_url: Optional[str] = None
+
+    # Agency Info
+    agency_name: Optional[str] = None
 
     # Metadata
-    source_url: Optional[str] = None  # Link to the original listing
-    image_url: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
     favorited_by: List["User"] = Relationship(
@@ -84,18 +105,11 @@ class Property(SQLModel, table=True):
 
 class CountryRule(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    country_code: str = Field(unique=True)  # IE, ES, AE, UK
+    country_code: str = Field(unique=True)
     country_name: str
-
-    # Currency info for the UI
     currency_code: str = Field(default="EUR")
     currency_symbol: str = Field(default="€")
-
-    # Lending Logic
-    lending_multiplier: float  # e.g. 4.0 for Ireland
-    min_down_payment_pct: float = Field(default=0.10)  # 10%, 20% etc.
-
-    # Tax Logic
-    tax_rate_pct: float  # Stamp duty or Transfer tax
-    additional_fees_fixed: float = Field(
-        default=0.0)  # Fixed legal/notary fees
+    lending_multiplier: float
+    min_down_payment_pct: float = Field(default=0.10)
+    tax_rate_pct: float
+    additional_fees_fixed: float = Field(default=0.0)
