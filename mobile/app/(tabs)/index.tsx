@@ -1,14 +1,12 @@
 import { View, StyleSheet } from 'react-native';
-import { PropertyList } from '@/components/PropertyList';
+import RooflineLayout from '@/components/RooflineLayout';
 
 export default function HomeScreen() {
   return (
-    <View style={styles.container}>
-      <PropertyList />
-    </View>
+    <RooflineLayout>
+      {/* This is the "Slot" where your 50 property records 
+          will eventually be mapped into cards! 
+      */}
+    </RooflineLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
-});
