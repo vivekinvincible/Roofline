@@ -18,7 +18,7 @@ const RooflineLayout = ({ children }) => {
           {/* Left: Logo */}
           <View style={styles.logoContainer}>
             <View style={styles.logoIcon}><Text style={styles.logoTextR}>R</Text></View>
-            <Text style={styles.logoText}>roofline</Text>
+            <Text style={styles.logoText}><b>roofline</b></Text>
           </View>
 
           {/* Center: Navigation Tabs */}
