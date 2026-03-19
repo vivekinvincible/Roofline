@@ -3,32 +3,79 @@ import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 
 export const PropertyCard = ({ property }: { property: any }) => {
   return (
-    <TouchableOpacity style={styles.card}>
-      <Image source={{ uri: property.image }} style={styles.image} />
-      <View style={styles.info}>
-        <Text style={styles.price}>€{property.price.toLocaleString()}</Text>
-        <Text style={styles.title}>{property.title}</Text>
-        <Text style={styles.location}>{property.location}</Text>
+    <View style={styles.card}>
+      {/* Left: Image Section */}
+      <View style={styles.imageContainer}>
+        <Image source={{ uri: property.image }} style={styles.image} />
       </View>
-    </TouchableOpacity>
+
+      {/* Right: Info Section */}
+      <View style={styles.content}>
+        <View style={styles.topRow}>
+          <View style={styles.marketBadge}>
+            <Text style={styles.marketText}>Market Place : {property.location}</Text>
+          </View>
+          <TouchableOpacity><Text style={{fontSize: 20}}>♡</Text></TouchableOpacity>
+        </View>
+
+        <Text style={styles.title}>{property.title}</Text>
+        <Text style={styles.specs}>{property.specs}</Text>
+        <Text style={styles.price}>€{property.price.toLocaleString()}</Text>
+
+        {/* Finance Table */}
+        <View style={styles.financeTable}>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableLabel}>Asking Price</Text>
+            <Text style={styles.tableValue}>€{property.price.toLocaleString()}</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableLabel}>Stamp Duty (1%)</Text>
+            <Text style={styles.tableValue}>€{property.stampDuty.toLocaleString()}</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableLabel}>Legal & Notary Fees</Text>
+            <Text style={styles.tableValue}>€{property.fees.toLocaleString()}</Text>
+          </View>
+          <View style={[styles.tableRow, styles.totalRow]}>
+            <Text style={styles.totalLabel}>Total Cost of Purchase</Text>
+            <Text style={styles.totalValue}>€{property.total.toLocaleString()}</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.contactBtn}>
+          <Text style={styles.contactBtnText}>Contact Agent</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    marginBottom: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 20,
+    flexDirection: 'row',
+    marginBottom: 30,
     overflow: 'hidden',
-    elevation: 3, // Android Shadow
-    shadowColor: '#000', // iOS Shadow
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  image: { width: '100%', height: 200 },
-  info: { padding: 12 },
-  price: { fontSize: 20, fontWeight: 'bold', color: '#2c3e50' },
-  title: { fontSize: 16, color: '#34495e', marginVertical: 4 },
-  location: { fontSize: 14, color: '#7f8c8d' },
+  imageContainer: { width: '45%' },
+  image: { width: '100%', height: '100%', minHeight: 350 },
+  content: { flex: 1, padding: 25 },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  marketBadge: { backgroundColor: '#94A3B8', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 5 },
+  marketText: { color: '#FFF', fontSize: 10, fontWeight: '700' },
+  title: { fontSize: 26, fontWeight: '800', color: '#0F172A', marginTop: 10 },
+  specs: { fontSize: 14, color: '#64748B', marginVertical: 5 },
+  price: { fontSize: 24, fontWeight: '800', color: '#0F172A', marginBottom: 15 },
+  financeTable: { borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 15 },
+  tableRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  tableLabel: { color: '#475569', fontWeight: '600' },
+  tableValue: { color: '#0F172A', fontWeight: '700' },
+  totalRow: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#E2E8F0' },
+  totalLabel: { fontSize: 18, fontWeight: '800' },
+  totalValue: { fontSize: 18, fontWeight: '800' },
+  contactBtn: { backgroundColor: '#5850EC', borderRadius: 10, padding: 12, alignItems: 'center', marginTop: 20 },
+  contactBtnText: { color: '#FFF', fontWeight: '700' }
 });

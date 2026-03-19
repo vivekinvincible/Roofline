@@ -41,24 +41,15 @@ const RooflineLayout = ({ children }: { children: React.ReactNode }) => {
           </View>
           
           <View style={styles.menuLinks}>
-            <TouchableOpacity style={styles.menuLinkItem} onPress={() => navigateTo('/')}>
-              <Text style={styles.menuLinkText}>Home</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuLinkItem} onPress={() => navigateTo('/')}>
-              <Text style={styles.menuLinkText}>Messages</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuLinkItem} onPress={() => navigateTo('/wallet')}>
-              <Text style={styles.menuLinkText}>Wallet</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuLinkItem} onPress={() => navigateTo('/modal')}>
-              <Text style={styles.menuLinkText}>Secure Vault</Text>
-            </TouchableOpacity>
+             <Text style={styles.menuLinkText}>Welcome to Roofline</Text>
           </View>
 
           <View style={styles.menuAuthSection}>
-            <TouchableOpacity style={styles.mobileProfileBtn} onPress={() => navigateTo('/profile')}>
-              <Ionicons name="person-circle-outline" size={24} color="#FFF" />
-              <Text style={styles.mobileProfileText}>My Profile</Text>
+            <TouchableOpacity style={styles.mobileLoginBtn} onPress={() => navigateTo('/loginpage')}>
+              <Text style={styles.mobileLoginText}>Log In</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.mobileSignupBtn} onPress={() => navigateTo('/signinpage')}>
+              <Text style={styles.mobileSignupText}>Sign up</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -80,23 +71,6 @@ const RooflineLayout = ({ children }: { children: React.ReactNode }) => {
             <Text style={styles.logoText}>roofline</Text>
           </TouchableOpacity>
 
-          {!isMobile && (
-            <View style={styles.centerNav}>
-              <TouchableOpacity onPress={() => router.push('/')}>
-                <Text style={styles.navItem}>Home</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => router.push('/')}>
-                <Text style={styles.navItem}>Message</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => router.push('/wallet')}>
-                <Text style={styles.navItem}>Wallet</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => router.push('/modal')}>
-                <Text style={styles.navItem}>Secure Vault</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
           <View style={styles.rightSection}>
             {isMobile ? (
               <TouchableOpacity 
@@ -106,12 +80,14 @@ const RooflineLayout = ({ children }: { children: React.ReactNode }) => {
                 <Ionicons name="menu" size={32} color="#1F2937" />
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity 
-                style={styles.profileBtn} 
-                onPress={() => router.push('/home')}
-              >
-                <Ionicons name="person-circle-sharp" size={36} color="#0F172A" />
-              </TouchableOpacity>
+              <View style={styles.authButtons}>
+                <TouchableOpacity style={styles.loginBtn} onPress={() => router.push('/loginpage')}>
+                  <Text style={styles.loginText}>Log In</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.signupBtn} onPress={() => router.push('/signinpage')}>
+                  <Text style={styles.signupText}>Sign up</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         </View>
@@ -131,14 +107,14 @@ const RooflineLayout = ({ children }: { children: React.ReactNode }) => {
               </Text>
             </View>
 
-            <View style={styles.footerColumn}>
+            <View style={[styles.footerColumn, isMobile && { marginTop: 30 }]}>
               <Text style={styles.footerTitle}>Platform</Text>
               <Text style={styles.footerLink}>Document Vault</Text>
               <Text style={styles.footerLink}>Tax Estimates</Text>
               <Text style={styles.footerLink}>Mortgage Calculator</Text>
             </View>
 
-            <View style={styles.footerColumn}>
+            <View style={[styles.footerColumn, isMobile && { marginTop: 30 }]}>
               <Text style={styles.footerTitle}>Support</Text>
               <Text style={styles.footerLink}>Contact Agent</Text>
               <Text style={styles.footerLink}>Privacy Policy</Text>
@@ -178,7 +154,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E2E8F0',
     zIndex: 10,
     ...Platform.select({
-      web: { position: 'sticky', top: 0 } as any
+      web: { position: 'sticky', top: 0 }
     })
   },
   logoContainer: {
@@ -204,25 +180,36 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#0F172A',
   },
-  centerNav: {
-    flexDirection: 'row',
-    gap: 24,
-  },
-  navItem: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '600',
-  },
   rightSection: {
     justifyContent: 'center',
     alignItems: 'flex-end',
-    minWidth: isMobile ? 40 : 60,
+    minWidth: isMobile ? 40 : 150,
   },
-  profileBtn: {
-    padding: 2,
+  authButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   menuIcon: {
     padding: 5,
+  },
+  loginBtn: {
+    marginRight: 20,
+  },
+  loginText: {
+    fontSize: 14,
+    color: '#0F172A',
+    fontWeight: '700',
+  },
+  signupBtn: {
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  signupText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
   mainContent: {
     flex: 1,
@@ -242,11 +229,6 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 30,
   },
-  menuLinkItem: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    paddingBottom: 15,
-  },
   menuLinkText: {
     fontSize: 26,
     fontWeight: '700',
@@ -256,17 +238,27 @@ const styles = StyleSheet.create({
     gap: 15,
     marginBottom: 20,
   },
-  mobileProfileBtn: {
-    flexDirection: 'row',
+  mobileLoginBtn: {
     width: '100%',
     paddingVertical: 18,
     borderRadius: 12,
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0F172A',
-    gap: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  mobileProfileText: {
+  mobileLoginText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  mobileSignupBtn: {
+    width: '100%',
+    paddingVertical: 18,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+  },
+  mobileSignupText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#FFF',
@@ -274,37 +266,36 @@ const styles = StyleSheet.create({
   footer: {
     backgroundColor: '#0F172A',
     padding: 40,
-    alignItems: 'center',
+    alignItems: 'center', // Added for centering
   },
   footerGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
+    justifyContent: 'center', // Added for centering columns
     width: '100%',
   },
   footerColumn: {
     width: isMobile ? '100%' : 250,
-    alignItems: 'center',
-    marginBottom: isMobile ? 30 : 0,
+    alignItems: 'center', // Added to center content within columns
   },
   footerTitle: {
     color: '#FFF',
     fontSize: 16,
     fontWeight: '800',
     marginBottom: 15,
-    textAlign: 'center',
+    textAlign: 'center', // Added for text centering
   },
   footerSubText: {
     color: '#94A3B8',
     fontSize: 14,
     lineHeight: 22,
-    textAlign: 'center',
+    textAlign: 'center', // Added for text centering
   },
   footerLink: {
     color: '#94A3B8',
     fontSize: 14,
     marginBottom: 10,
-    textAlign: 'center',
+    textAlign: 'center', // Added for text centering
   },
   footerBottom: {
     marginTop: 40,
@@ -312,7 +303,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#1E293B',
     paddingTop: 20,
     flexDirection: isMobile ? 'column' : 'row',
-    justifyContent: 'center',
+    justifyContent: 'center', // Changed to center bottom elements
     alignItems: 'center',
     width: '100%',
     gap: 20,
@@ -320,12 +311,12 @@ const styles = StyleSheet.create({
   copyright: {
     color: '#475569',
     fontSize: 12,
-    textAlign: 'center',
+    textAlign: 'center', // Added for text centering
   },
   socialRow: {
     flexDirection: 'row',
     gap: 20,
-    justifyContent: 'center',
+    justifyContent: 'center', // Added for centering socials
   },
   socialLink: {
     color: '#94A3B8',
