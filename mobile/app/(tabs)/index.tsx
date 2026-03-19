@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -10,12 +10,16 @@ import {
   Platform
 } from 'react-native';
 import RooflineLayoutSignout from '@/components/RooflineLayoutSignout';
+import { PropertyList } from '@/components/PropertyList'; // Import your new component
 import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 const isMobile = width < 768;
 
 export default function LandingPage() {
+  // --- STATE FOR FILTERING ---
+  const [selectedCountry, setSelectedCountry] = useState('IE');
+
   return (
     <RooflineLayoutSignout>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
@@ -42,6 +46,36 @@ export default function LandingPage() {
               <Text style={styles.searchButtonText}>Discover Property</Text>
             </TouchableOpacity>
           </View>
+
+          {/* --- NEW: COUNTRY TOGGLE TABS --- */}
+          <View style={styles.tabContainer}>
+            <TouchableOpacity 
+              style={[styles.tab, selectedCountry === 'IE' && styles.activeTab]}
+              onPress={() => setSelectedCountry('IE')}
+            >
+              <Text style={[styles.tabText, selectedCountry === 'IE' && styles.activeTabText]}>🇮🇪 Ireland</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.tab, selectedCountry === 'ES' && styles.activeTab]}
+              onPress={() => setSelectedCountry('ES')}
+            >
+              <Text style={[styles.tabText, selectedCountry === 'ES' && styles.activeTabText]}>🇪🇸 Spain</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* --- LIVE PROPERTY LIST SECTION --- */}
+        <View style={styles.resultsSection}>
+          <View style={styles.sectionHeaderInside}>
+            <Text style={styles.sectionTitle}>Featured Listings</Text>
+            <Text style={styles.sectionDescription}>
+              Showing real-time results from your selected market.
+            </Text>
+          </View>
+          
+          {/* The list now fetches automatically whenever selectedCountry changes */}
+          <PropertyList country={selectedCountry} />
         </View>
 
         {/* --- MARKET INTELLIGENCE SECTION --- */}
@@ -72,9 +106,6 @@ export default function LandingPage() {
               <Text style={styles.dataLabel}>Max Borrowing</Text>
               <Text style={styles.dataValue}>4.0x Gross Income</Text>
             </View>
-            <TouchableOpacity style={styles.breakdownButton}>
-              <Text style={styles.breakdownButtonText}>Full Breakdown</Text>
-            </TouchableOpacity>
           </View>
 
           {/* Spain Card */}
@@ -95,9 +126,6 @@ export default function LandingPage() {
               <Text style={styles.dataLabel}>Max Borrowing</Text>
               <Text style={styles.dataValue}>70% LTV (Non-Res)</Text>
             </View>
-            <TouchableOpacity style={styles.breakdownButton}>
-              <Text style={styles.breakdownButtonText}>Full Breakdown</Text>
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -118,14 +146,6 @@ export default function LandingPage() {
             <Text style={styles.featureTitle}>Local Agents</Text>
             <Text style={styles.featureText}>Instant connection to verified agents in Dublin, Barcelona, Marbella, or Cork.</Text>
           </View>
-
-          <View style={styles.featureItem}>
-            <View style={[styles.featureIcon, { backgroundColor: '#F3E8FF' }]}>
-              <Ionicons name="stats-chart" size={24} color="#6B21A8" />
-            </View>
-            <Text style={styles.featureTitle}>Affordability Sync</Text>
-            <Text style={styles.featureText}>We sync with your financial state to show properties you can actually afford.</Text>
-          </View>
         </View>
 
       </ScrollView>
@@ -141,8 +161,9 @@ const styles = StyleSheet.create({
   heroSection: {
     alignItems: 'center',
     paddingTop: isMobile ? 60 : 100,
-    paddingBottom: 60,
+    paddingBottom: 40,
     paddingHorizontal: 20,
+    backgroundColor: '#F8FAFC', // Soft background for the hero
   },
   heroTitle: {
     fontSize: isMobile ? 36 : 56,
@@ -195,6 +216,39 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 15,
   },
+  
+  // --- TABS STYLING ---
+  tabContainer: {
+    flexDirection: 'row',
+    marginTop: 30,
+    gap: 12,
+  },
+  tab: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 25,
+    backgroundColor: '#E2E8F0',
+  },
+  activeTab: {
+    backgroundColor: '#4F46E5',
+  },
+  tabText: {
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  activeTabText: {
+    color: '#FFF',
+  },
+
+  // --- RESULTS SECTION ---
+  resultsSection: {
+    paddingHorizontal: isMobile ? 20 : 60,
+    marginTop: 40,
+  },
+  sectionHeaderInside: {
+    marginBottom: 20,
+  },
+
   sectionHeader: {
     paddingHorizontal: isMobile ? 20 : 60,
     marginTop: 80,
@@ -264,20 +318,6 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   dataValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  breakdownButton: {
-    marginTop: 20,
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  breakdownButtonText: {
     fontSize: 13,
     fontWeight: '700',
     color: '#1E293B',

@@ -1,5 +1,5 @@
-from fastapi import FastAPI, BackgroundTasks, Depends
-from sqlmodel import Session, select
+from fastapi import FastAPI, BackgroundTasks, APIRouter, Depends, HTTPException
+from sqlmodel import Session, select, func
 from database import engine, get_db
 from models import Property, FinancialProfile, SQLModel
 from adapters import IdealistaAdapter, DaftAdapter
@@ -7,12 +7,20 @@ from storage import PropertyStorage
 from ingestors import ListingIngestor
 import sqlalchemy as sa
 import os
+from typing import List, Dict, Any
+from fastapi.middleware.cors import CORSMiddleware
 
 # Ensure tables are created
 SQLModel.metadata.create_all(engine)
 
 app = FastAPI(title="Real Estate Global API")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # For development
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 print(f"🚀 SERVER STARTING IN MODE: {os.getenv('ENV_STATE')}")
 
@@ -29,6 +37,49 @@ def debug_properties(db: Session = Depends(get_db)):
     return {
         "total_in_db": total_count,
         "recent_samples": results
+    }
+
+
+router = APIRouter()
+
+
+@app.get("/properties/{country_code}", response_model=Dict[str, Any])
+def get_properties_by_country(
+    country_code: str,
+    limit: int = 3,
+    offset: int = 0,
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve properties for a specific country with pagination support.
+    """
+    # 1. Standardize and Validate
+    normalized_code = country_code.upper()
+    if normalized_code not in ["IE", "ES"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Currently, only 'IE' (Ireland) and 'ES' (Spain) are supported."
+        )
+
+    # 2. Get the TOTAL count (Crucial for the frontend 'hasMore' logic)
+    count_statement = select(func.count()).select_from(Property).where(
+        Property.country_code == normalized_code
+    )
+    total_count = db.exec(count_statement).one()
+
+    # 3. Query the specific page (Apply Offset and Limit)
+    statement = (
+        select(Property)
+        .where(Property.country_code == normalized_code)
+        .offset(offset)
+        .limit(limit)
+    )
+    results = db.exec(statement).all()
+
+    # 4. Return structured data
+    return {
+        "total": total_count,
+        "properties": results
     }
 
 
