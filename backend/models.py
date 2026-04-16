@@ -2,8 +2,9 @@ from sqlmodel import SQLModel, Field, Relationship
 from typing import List, Optional
 from datetime import datetime
 from enum import Enum
+from pydantic import validator
 
-# --- ENUMS ---
+# --- 1. ENUMS ---
 
 
 class AreaUnit(str, Enum):
@@ -17,66 +18,33 @@ class PropertyType(str, Enum):
     VILLA = "villa"
     COMMERCIAL = "commercial"
 
-# --- LINK TABLES ---
+# --- 2. LINK TABLES (Must be defined before the models that use them) ---
 
 
 class UserFavorite(SQLModel, table=True):
     user_id: Optional[int] = Field(
-        default=None, foreign_key="user.id", primary_key=True)
+        default=None, foreign_key="user.id", primary_key=True
+    )
     property_id: Optional[int] = Field(
-        default=None, foreign_key="property.id", primary_key=True)
-
-# --- CORE MODELS ---
-
-
-class User(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    email: str = Field(unique=True, index=True)
-    hashed_password: str
-
-    financial_profile: Optional["FinancialProfile"] = Relationship(
-        back_populates="user")
-
-    favorites: List["Property"] = Relationship(
-        back_populates="favorited_by",
-        link_model=UserFavorite
+        default=None, foreign_key="property.id", primary_key=True
     )
 
-
-class FinancialProfile(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="user.id")
-
-    annual_income: float
-    total_savings: float
-    monthly_debt: float
-    currency: str = Field(default="EUR")
-
-    user: User = Relationship(back_populates="financial_profile")
+# --- 3. PROPERTY MODEL ---
 
 
 class Property(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-
-    # New: Tracking IDs from external sources to prevent duplicates
     external_id: str = Field(unique=True, index=True)
     source: str = Field(index=True)  # "idealista" or "daft"
-
     title: str
     description: Optional[str] = None
     property_type: str = Field(default="apartment")
-
-    # Financials
     price: float
     currency: str = Field(default="EUR")
-
-    # Space
     area: Optional[float] = None
     area_unit: AreaUnit = Field(default=AreaUnit.SQM)
     rooms: Optional[int] = None
     bathrooms: Optional[int] = None
-
-    # Location
     country_code: str = Field(index=True)  # "IE", "ES"
     location_city: Optional[str] = None
     location_province: Optional[str] = None
@@ -84,23 +52,57 @@ class Property(SQLModel, table=True):
     zip_code: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-
-    # Multimedia
     source_url: Optional[str] = None
     image_url: Optional[str] = None
     video_url: Optional[str] = None
     tour_url: Optional[str] = None
-
-    # Agency Info
     agency_name: Optional[str] = None
-
-    # Metadata
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    # Relationships
+    # Use a string "User" here because User is defined later in the file
     favorited_by: List["User"] = Relationship(
-        back_populates="favorites", link_model=UserFavorite)
+        back_populates="favorites",
+        link_model=UserFavorite
+    )
+
+# --- 4. USER MODEL ---
+
+
+class User(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    full_name: str
+    email: str = Field(unique=True, index=True)
+    hashed_password: str
+    is_active: bool = Field(default=True)
+
+    financial_profile: Optional["FinancialProfile"] = Relationship(
+        back_populates="user")
+
+    # We can now use Property and UserFavorite directly (no quotes)
+    favorites: List[Property] = Relationship(
+        back_populates="favorited_by",
+        link_model=UserFavorite
+    )
+
+    @validator("email")
+    def validate_email(cls, v):
+        if "@" not in v:
+            raise ValueError("Invalid email format")
+        return v
+
+# --- 5. SUPPORTING MODELS ---
+
+
+class FinancialProfile(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id")
+    annual_income: float
+    total_savings: float
+    monthly_debt: float
+    currency: str = Field(default="EUR")
+
+    user: User = Relationship(back_populates="financial_profile")
 
 
 class CountryRule(SQLModel, table=True):

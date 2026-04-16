@@ -10,7 +10,7 @@ import {
   Platform
 } from 'react-native';
 import RooflineLayoutSignout from '@/components/RooflineLayoutSignout';
-import { PropertyList } from '@/components/PropertyList'; // Import your new component
+import { PropertyList } from '@/components/PropertyList'; 
 import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
@@ -19,6 +19,14 @@ const isMobile = width < 768;
 export default function LandingPage() {
   // --- STATE FOR FILTERING ---
   const [selectedCountry, setSelectedCountry] = useState('IE');
+  const [searchText, setSearchText] = useState(''); // Tracks typing
+  const [appliedSearch, setAppliedSearch] = useState(''); // Tracks "Discover" clicks
+
+  // --- HANDLE SEARCH ACTION ---
+  const handleSearch = () => {
+    console.log("Searching for:", searchText);
+    setAppliedSearch(searchText); // This triggers the PropertyList update
+  };
 
   return (
     <RooflineLayoutSignout>
@@ -35,19 +43,26 @@ export default function LandingPage() {
             and securely store your documents for a one-click application.
           </Text>
 
-          {/* Search Bar */}
+          {/* Search Bar - UPDATED */}
           <View style={styles.searchContainer}>
             <TextInput 
               style={styles.searchInput}
               placeholder="Search areas (e.g. Malaga, Wicklow...)"
               placeholderTextColor="#9CA3AF"
+              value={searchText}
+              onChangeText={setSearchText}
+              onSubmitEditing={handleSearch} // Trigger on "Enter" key
             />
-            <TouchableOpacity style={styles.searchButton}>
+            <TouchableOpacity 
+              style={styles.searchButton} 
+              onPress={handleSearch}
+              activeOpacity={0.8}
+            >
               <Text style={styles.searchButtonText}>Discover Property</Text>
             </TouchableOpacity>
           </View>
 
-          {/* --- NEW: COUNTRY TOGGLE TABS --- */}
+          {/* --- COUNTRY TOGGLE TABS --- */}
           <View style={styles.tabContainer}>
             <TouchableOpacity 
               style={[styles.tab, selectedCountry === 'IE' && styles.activeTab]}
@@ -68,17 +83,23 @@ export default function LandingPage() {
         {/* --- LIVE PROPERTY LIST SECTION --- */}
         <View style={styles.resultsSection}>
           <View style={styles.sectionHeaderInside}>
-            <Text style={styles.sectionTitle}>Featured Listings</Text>
+            <Text style={styles.sectionTitle}>
+              {appliedSearch ? `Search Results for "${appliedSearch}"` : "Featured Listings"}
+            </Text>
             <Text style={styles.sectionDescription}>
               Showing real-time results from your selected market.
             </Text>
           </View>
           
-          {/* The list now fetches automatically whenever selectedCountry changes */}
-          <PropertyList country={selectedCountry} />
+          {/* UPDATED: Passing searchQuery to the component */}
+          <PropertyList 
+            country={selectedCountry} 
+            searchQuery={appliedSearch} 
+          />
         </View>
 
-        {/* --- MARKET INTELLIGENCE SECTION --- */}
+        {/* ... Rest of your code (Market Intelligence, Features) remains the same ... */}
+        
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Market Intelligence</Text>
           <Text style={styles.sectionDescription}>
@@ -129,7 +150,6 @@ export default function LandingPage() {
           </View>
         </View>
 
-        {/* --- FEATURES SECTION --- */}
         <View style={styles.featuresRow}>
           <View style={styles.featureItem}>
             <View style={[styles.featureIcon, { backgroundColor: '#DBEAFE' }]}>
@@ -147,11 +167,12 @@ export default function LandingPage() {
             <Text style={styles.featureText}>Instant connection to verified agents in Dublin, Barcelona, Marbella, or Cork.</Text>
           </View>
         </View>
-
       </ScrollView>
     </RooflineLayoutSignout>
   );
 }
+
+// ... Styles remain the same ...
 
 const styles = StyleSheet.create({
   container: {

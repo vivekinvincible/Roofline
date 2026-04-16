@@ -1,17 +1,15 @@
 import os
+import re
 from typing import Dict, Any, Type
 from dotenv import load_dotenv
 from apify_client import ApifyClient
 from sqlmodel import Session, create_engine, select
 
-# Internal imports - ensure these match your file structure
+# Internal imports
 from models import Property, PropertyType, AreaUnit
 from database import DATABASE_URL
 
-# Load environment variables from .env file
 load_dotenv()
-
-# 1. Base Adapter Interface
 
 
 class BaseListingAdapter:
@@ -19,28 +17,53 @@ class BaseListingAdapter:
     def map(item: Dict[str, Any]) -> Property:
         raise NotImplementedError
 
-# 2. Ireland Adapter (Daft.ie)
 
-
-# 2. UPDATED Ireland Adapter (Blagoysimandoff Scraper)
 class DaftIEAdapter(BaseListingAdapter):
     @staticmethod
     def map(item: Dict[str, Any]) -> Property:
+        # The actual data is nested inside "listing"
+        listing = item.get("listing", {})
+
+        # 1. Clean Price: "€1,200,000" -> 1200000.0
+        raw_price = listing.get("price", "0")
+        clean_price = float(
+            re.sub(r'[^\d.]', '', raw_price)) if raw_price else 0.0
+
+        # 2. Clean Rooms: "4 Bed" -> 4
+        raw_beds = listing.get("numBedrooms", "0")
+        beds = int(re.search(r'\d+', raw_beds).group()
+                   ) if raw_beds and re.search(r'\d+', raw_beds) else 0
+
+        # 3. Clean Baths: "5 Bath" -> 5
+        raw_baths = listing.get("numBathrooms", "0")
+        baths = int(re.search(r'\d+', raw_baths).group()
+                    ) if raw_baths and re.search(r'\d+', raw_baths) else 0
+
+        # 4. Get Coordinates: [lon, lat]
+        coords = listing.get("point", {}).get("coordinates", [None, None])
+
+        # 5. Get Image: Pick the high-res version
+        images = listing.get("media", {}).get("images", [])
+        image_url = images[0].get("size720x480") if images else None
+
         return Property(
-            title=item.get("title", "Unknown Title"),
-            property_type=PropertyType.APARTMENT if "apartment" in str(
-                item.get("category", "")).lower() else PropertyType.HOUSE,
-            price=float(item.get("price", {}).get("amount", 0)) if isinstance(
-                item.get("price"), dict) else float(item.get("price", 0)),
+            external_id=f"daft_{listing.get('id')}",
+            source="daft",
+            title=listing.get("title", "Unknown Title"),
+            property_type=PropertyType.HOUSE,  # Default to house, or parse from 'sections'
+            price=clean_price,
             currency="EUR",
-            area=float(item.get("floorArea", 0) or 0),
+            area=float(listing.get("floorArea", {}).get("value", 0) or 0),
             area_unit=AreaUnit.SQM,
+            rooms=beds,
+            bathrooms=baths,
             country_code="IE",
-            location_city=item.get("location", {}).get("areaName", "Dublin"),
-            latitude=item.get("location", {}).get(
-                "coordinates", {}).get("lat"),
-            longitude=item.get("location", {}).get(
-                "coordinates", {}).get("lon")
+            location_city=listing.get("title", "").split(
+                ",")[-2].strip() if "," in listing.get("title", "") else "Ireland",
+            latitude=coords[1],
+            longitude=coords[0],
+            image_url=image_url,
+            source_url=f"https://www.daft.ie{listing.get('seoFriendlyPath')}"
         )
 
 # 3. UPDATED Spain Adapter (Datacut Scraper)

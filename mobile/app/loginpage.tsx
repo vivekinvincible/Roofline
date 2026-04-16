@@ -1,9 +1,59 @@
-import React from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import RooflineLayout from '@/components/RooflineLayout';
+import * as SecureStore from 'expo-secure-store';
+import { useRouter } from 'expo-router';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please enter both email and password");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('http://192.168.1.12:8000/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+  console.log("Response OK received"); // Add this
+  if (data.access_token) {
+  console.log("Login successful, token received");
+
+  // Multi-platform storage logic
+  if (Platform.OS === 'web') {
+    localStorage.setItem('userToken', data.access_token);
+  } else {
+    await SecureStore.setItemAsync('userToken', data.access_token);
+  }
+
+  console.log("Token stored, redirecting...");
+  router.replace('/home'); 
+}
+}
+
+else {
+        Alert.alert("Login Failed", data.detail || "Invalid credentials");
+      }
+    } catch (err) {
+      Alert.alert("Error", "Could not connect to the server.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <RooflineLayout>
       <View style={styles.wrapper}>
@@ -15,6 +65,8 @@ export default function LoginPage() {
             <TextInput
               style={styles.input}
               placeholder="name@company.com"
+              value={email}
+              onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
               placeholderTextColor="#9CA3AF"
@@ -24,37 +76,35 @@ export default function LoginPage() {
           <View style={styles.inputGroup}>
             <View style={styles.labelRow}>
               <Text style={styles.label}>Password</Text>
-              <TouchableOpacity>
-                <Text style={styles.forgotText}>Forgot?</Text>
-              </TouchableOpacity>
+              <TouchableOpacity><Text style={styles.forgotText}>Forgot?</Text></TouchableOpacity>
             </View>
             <TextInput
               style={styles.input}
               placeholder="••••••••"
+              value={password}
+              onChangeText={setPassword}
               secureTextEntry
               placeholderTextColor="#9CA3AF"
             />
           </View>
 
-          <TouchableOpacity style={styles.loginButton}>
-            <Text style={styles.loginButtonText}>Login</Text>
+          <TouchableOpacity 
+            style={styles.loginButton} 
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginButtonText}>Login</Text>}
           </TouchableOpacity>
 
           <View style={styles.socialRow}>
-            <TouchableOpacity style={styles.socialIcon}>
-              <FontAwesome name="facebook-square" size={32} color="#3b5998" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialIcon}>
-              <FontAwesome name="linkedin-square" size={32} color="#0077b5" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialIcon}>
-              <FontAwesome name="google" size={32} color="#DB4437" />
-            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialIcon}><FontAwesome name="facebook-square" size={32} color="#3b5998" /></TouchableOpacity>
+            <TouchableOpacity style={styles.socialIcon}><FontAwesome name="linkedin-square" size={32} color="#0077b5" /></TouchableOpacity>
+            <TouchableOpacity style={styles.socialIcon}><FontAwesome name="google" size={32} color="#DB4437" /></TouchableOpacity>
           </View>
 
           <View style={styles.footerTextRow}>
             <Text style={styles.footerText}>Don't have an account?</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/signinpage')}>
               <Text style={styles.signupLink}>Create Account</Text>
             </TouchableOpacity>
           </View>

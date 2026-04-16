@@ -1,3 +1,4 @@
+import datetime
 from sqlmodel import Session, select
 from models import Property
 
@@ -14,8 +15,11 @@ class PropertyStorage:
 
         if existing:
             # Update existing fields
-            for key, value in property_data.model_dump(exclude={"id"}).items():
+            for key, value in property_data.model_dump(exclude={"id", "created_at"}).items():
                 setattr(existing, key, value)
+
+            # Manually refresh the update timestamp
+            existing.updated_at = datetime.utcnow()
         else:
             # Add new record
             self.session.add(property_data)

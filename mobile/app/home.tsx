@@ -1,107 +1,114 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Pressable } from 'react-native';
 import RooflineLayout from '../components/RooflineLayout';
 import { PropertyList } from '../components/PropertyList';
-import { Ionicons } from '@expo/vector-icons';
 
 export default function Home() {
   const [activeCountry, setActiveCountry] = useState<'IE' | 'ES'>('IE');
+  const [searchText, setSearchText] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
+
+  const handleSearch = () => {
+    // We use a browser alert as a backup to console logs
+    // alert("Search Triggered: " + searchText); 
+    console.log("CRITICAL_LOG: Button Pressed");
+    setAppliedSearch(searchText);
+  };
 
   return (
     <RooflineLayout>
-      <ScrollView style={styles.container} stickyHeaderIndices={[1]}>
-        {/* --- HERO SECTION --- */}
+      <View style={styles.container}>
+        {/* --- HERO --- */}
         <View style={styles.hero}>
           <Text style={styles.heroTitle}>
             Your path to property in <Text style={styles.highlight}>Ireland & Spain.</Text>
           </Text>
-          <Text style={styles.heroSub}>
-            Ireland calculates Stamp Duty at 1% for properties under €1m. Solicitor fees are typically fixed.
-          </Text>
         </View>
 
-        {/* --- TOGGLE & SEARCH BAR --- */}
-        <View style={styles.searchBarContainer}>
-          <View style={styles.searchBox}>
+        {/* --- SEARCH SECTION --- */}
+        <View style={styles.searchSection}>
+          <View style={styles.searchBarContainer}>
             <TextInput 
-              placeholder="Search areas (e.g. Malaga, Wicklow...)" 
+              placeholder="Search areas..." 
               style={styles.input}
+              value={searchText}
+              onChangeText={setSearchText}
+              onSubmitEditing={handleSearch}
             />
-            <TouchableOpacity style={styles.discoverBtn}>
-              <Text style={styles.discoverText}>Discover Property</Text>
-            </TouchableOpacity>
+            <Pressable 
+              onPress={handleSearch}
+              style={({ pressed }) => [
+                styles.discoverBtn,
+                { opacity: pressed ? 0.5 : 1 }
+              ]}
+            >
+              <Text style={styles.discoverText}>Discover</Text>
+            </Pressable>
           </View>
 
-          {/* Country Toggle */}
+          {/* Toggle */}
           <View style={styles.toggleContainer}>
-            <TouchableOpacity 
-              style={[styles.toggleBtn, activeCountry === 'IE' && styles.toggleActive]}
+            <Pressable 
               onPress={() => setActiveCountry('IE')}
+              style={[styles.tgl, activeCountry === 'IE' && styles.tglActive]}
             >
-              <Text style={activeCountry === 'IE' ? styles.toggleTextActive : styles.toggleText}>🇮🇪 IE</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.toggleBtn, activeCountry === 'ES' && styles.toggleActive]}
+              <Text style={activeCountry === 'IE' ? styles.tglTextActive : styles.tglText}>🇮🇪 IE</Text>
+            </Pressable>
+            <Pressable 
               onPress={() => setActiveCountry('ES')}
+              style={[styles.tgl, activeCountry === 'ES' && styles.tglActive]}
             >
-              <Text style={activeCountry === 'ES' ? styles.toggleTextActive : styles.toggleText}>🇪🇸 ES</Text>
-            </TouchableOpacity>
+              <Text style={activeCountry === 'ES' ? styles.tglTextActive : styles.tglText}>🇪🇸 ES</Text>
+            </Pressable>
           </View>
         </View>
 
-        {/* --- PROPERTY LIST --- */}
+        {/* --- LIST --- */}
         <View style={styles.listSection}>
-          <View style={styles.listHeader}>
-            <Text style={styles.resultCount}>102 Matching Properties for Sale</Text>
-            <TouchableOpacity style={styles.sortBtn}>
-              <Text style={styles.sortText}>Best Match</Text>
-              <Ionicons name="chevron-down" size={14} color="#4F46E5" />
-            </TouchableOpacity>
-          </View>
-          
-          <PropertyList country={activeCountry} />
+          <Text style={styles.resultCount}>
+            {appliedSearch ? `Matches for "${appliedSearch}"` : "Recent Properties"}
+          </Text>
+          <PropertyList country={activeCountry} searchQuery={appliedSearch} />
         </View>
-      </ScrollView>
+      </View>
     </RooflineLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  hero: { padding: 40, alignItems: 'center', backgroundColor: '#F8FAFC' },
-  heroTitle: { fontSize: 32, fontWeight: '800', textAlign: 'center', color: '#0F172A' },
+  container: { flex: 1 },
+  hero: { padding: 40, backgroundColor: '#F8FAFC' },
+  heroTitle: { fontSize: 28, fontWeight: '800', textAlign: 'center' },
   highlight: { color: '#4F46E5' },
-  heroSub: { fontSize: 14, color: '#64748B', textAlign: 'center', marginTop: 15, maxWidth: 600 },
-  searchBarContainer: { 
-    padding: 20, 
-    backgroundColor: '#FFFFFF', 
-    flexDirection: 'row', 
-    alignItems: 'center',
+  searchSection: {
+    flexDirection: 'row',
+    padding: 20,
     justifyContent: 'center',
-    gap: 15,
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#FFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0'
+    borderBottomColor: '#EEE',
+    zIndex: 999, // Force this to be on top of everything
   },
-  searchBox: { 
-    flexDirection: 'row', 
-    backgroundColor: '#FFF', 
-    borderRadius: 12, 
-    borderWidth: 1, 
-    borderColor: '#E2E8F0',
-    width: '50%',
-    padding: 5
+  searchBarContainer: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#CCC',
+    borderRadius: 10,
+    flex: 1,
+    maxWidth: 400,
+    padding: 5,
+    alignItems: 'center'
   },
-  input: { flex: 1, paddingHorizontal: 15 },
-  discoverBtn: { backgroundColor: '#0F172A', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
-  discoverText: { color: '#FFF', fontWeight: '700' },
+  input: { flex: 1, paddingHorizontal: 10, height: 40 },
+  discoverBtn: { backgroundColor: '#0F172A', padding: 10, borderRadius: 8 },
+  discoverText: { color: '#FFF', fontWeight: 'bold' },
   toggleContainer: { flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 10, padding: 4 },
-  toggleBtn: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 8 },
-  toggleActive: { backgroundColor: '#4F46E5' },
-  toggleText: { color: '#64748B', fontWeight: '700' },
-  toggleTextActive: { color: '#FFF', fontWeight: '700' },
-  listSection: { paddingHorizontal: 40, paddingBottom: 60 },
-  listHeader: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 30 },
-  resultCount: { fontSize: 24, fontWeight: '700', color: '#0F172A' },
-  sortBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: '#E2E8F0', padding: 8, borderRadius: 8 },
-  sortText: { fontWeight: '600', color: '#4F46E5' }
+  tgl: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
+  tglActive: { backgroundColor: '#4F46E5' },
+  tglText: { color: '#64748B', fontWeight: 'bold' },
+  tglTextActive: { color: '#FFF', fontWeight: 'bold' },
+  listSection: { padding: 20 },
+  resultCount: { fontSize: 20, fontWeight: '700', marginBottom: 20 }
 });
