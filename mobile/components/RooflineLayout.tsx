@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { 
   StyleSheet, 
   View, 
@@ -17,6 +18,7 @@ const { width } = Dimensions.get('window');
 const isMobile = width < 768;
 
 const RooflineLayout = ({ children }: { children: React.ReactNode }) => {
+  const { signOut, userToken } = useAuth(); // Get auth state
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -72,20 +74,19 @@ const RooflineLayout = ({ children }: { children: React.ReactNode }) => {
         
         {/* --- HEADER --- */}
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.logoContainer} 
-            onPress={() => router.push('/')}
-          >
-            <View style={styles.logoIcon}><Text style={styles.logoTextR}>R</Text></View>
-            <Text style={styles.logoText}>roofline</Text>
-          </TouchableOpacity>
+        {/* Logo Section */}
+        <TouchableOpacity style={styles.logoContainer} onPress={() => router.push('/home')}>
+           <View style={styles.logoIcon}><Text style={styles.logoTextR}>R</Text></View>
+           <Text style={styles.logoText}>roofline</Text>
+        </TouchableOpacity>
 
-          {!isMobile && (
+          {/* Navigation Links - Only show if userToken exists */}
+        {!isMobile && userToken && (
             <View style={styles.centerNav}>
-              <TouchableOpacity onPress={() => router.push('/')}>
+              <TouchableOpacity onPress={() => router.push('/home')}>
                 <Text style={styles.navItem}>Home</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => router.push('/')}>
+              <TouchableOpacity onPress={() => router.push('/home')}>
                 <Text style={styles.navItem}>Message</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => router.push('/wallet')}>
@@ -98,23 +99,22 @@ const RooflineLayout = ({ children }: { children: React.ReactNode }) => {
           )}
 
           <View style={styles.rightSection}>
-            {isMobile ? (
-              <TouchableOpacity 
-                style={styles.menuIcon} 
-                onPress={() => setIsMenuOpen(true)}
-              >
-                <Ionicons name="menu" size={32} color="#1F2937" />
+          {userToken ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
+              <TouchableOpacity onPress={signOut}>
+                <Text style={{ color: '#EF4444', fontWeight: '700' }}>Sign Out</Text>
               </TouchableOpacity>
-            ) : (
-              <TouchableOpacity 
-                style={styles.profileBtn} 
-                onPress={() => router.push('/home')}
-              >
+              <TouchableOpacity onPress={() => router.push('/home')}>
                 <Ionicons name="person-circle-sharp" size={36} color="#0F172A" />
               </TouchableOpacity>
-            )}
-          </View>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => router.push('/loginpage')}>
+               <Text style={styles.navItem}>Login</Text>
+            </TouchableOpacity>
+          )}
         </View>
+      </View>
 
         {/* --- MAIN CONTENT --- */}
         <View style={styles.mainContent}>

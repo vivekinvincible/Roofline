@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
 import { PropertyCard } from './PropertyCard';
 
-const API_URL = 'http://192.168.1.12:8000'; 
+const API_URL = 'http://192.168.1.13:8000'; 
 const PAGE_SIZE = 3;
 
 interface PropertyListProps {

@@ -33,6 +33,17 @@ app.add_middleware(
 
 print(f"🚀 SERVER STARTING IN MODE: {os.getenv('ENV_STATE', 'development')}")
 
+# --- NEW SCHEMAS FOR BUYING POWER ---
+
+
+class EligibilityRequest(BaseModel):
+    country: str  # 'ireland' or 'spain'
+    monthly_gross: float
+    monthly_debt: float
+    current_rent: float
+    monthly_savings: float
+    total_savings: float
+
 
 # 1. This schema accepts the raw request.
 # It has NO max_length, so it won't trigger the error.
@@ -199,6 +210,67 @@ def get_properties_by_country(
     }
 
 # --- 3. SPECIALIZED CALCULATORS ---
+
+# --- 3. THE UNIFIED ELIGIBILITY ENGINE ---
+
+
+@app.post("/calculate-eligibility")
+def calculate_eligibility(req: EligibilityRequest):
+    """
+    Calculates maximum buying power, closing costs, and 
+    mortgage readiness metrics based on regional rules.
+    """
+    m_gross = req.monthly_gross
+    m_debt = req.monthly_debt
+    savings = req.total_savings
+
+    # Conservative Net Income (approx 72% for typical tax brackets)
+    net_monthly = m_gross * 0.72
+
+    mortgage_capacity = 0
+    tax_rate = 0
+    fee_buffer = 0
+
+    if req.country.lower() == 'ireland':
+        # Central Bank Rule: 4x Gross Annual Income
+        mortgage_capacity = (m_gross * 12) * 4
+        tax_rate = 0.01  # Stamp Duty
+        fee_buffer = 3500  # Solicitors, Surveyors, Valuations
+
+    elif req.country.lower() == 'spain':
+        # DTI Rule: Max 35% of Net Income minus existing debts
+        available_for_mortgage = (net_monthly * 0.35) - m_debt
+        # Estimated loan: 180 monthly payments (approx 20 years at current rates)
+        mortgage_capacity = available_for_mortgage * 180
+        tax_rate = 0.10  # ITP Tax (Varies by region 8-12%)
+        fee_buffer = 2000  # Notary & Registry
+
+    else:
+        raise HTTPException(status_code=400, detail="Unsupported country code")
+
+    # 1. Calculation for Max Property Price
+    # (Loan + Savings - Fees) / (1 + TaxRate)
+    max_price = (mortgage_capacity + savings - fee_buffer) / (1 + tax_rate)
+    max_price = max(0, round(max_price, 2))
+
+    # 2. Hassle-Free Metrics
+    estimated_monthly_payment = mortgage_capacity / 240  # 20-year term estimate
+    dti_ratio = ((estimated_monthly_payment + m_debt) / net_monthly) * 100
+
+    # Stress Test (+2% Rate Hike simulation)
+    stress_test_payment = estimated_monthly_payment * 1.25
+
+    return {
+        "max_price": max_price,
+        "loan_limit": round(mortgage_capacity, 2),
+        "closing_costs": round((max_price * tax_rate) + fee_buffer, 2),
+        "metrics": {
+            "dti_ratio": round(dti_ratio, 2),
+            "is_dti_healthy": dti_ratio < 35,
+            "stress_test_monthly": round(stress_test_payment, 2),
+            "repayment_capacity": round(req.current_rent + req.monthly_savings, 2)
+        }
+    }
 
 
 @app.get("/properties/affordable")

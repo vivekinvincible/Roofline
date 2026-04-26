@@ -4,8 +4,10 @@ import { FontAwesome } from '@expo/vector-icons';
 import RooflineLayout from '@/components/RooflineLayout';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
+  const { signIn } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -19,7 +21,7 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const response = await fetch('http://192.168.1.12:8000/auth/login', {
+      const response = await fetch('http://192.168.1.13:8000/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -27,28 +29,14 @@ export default function LoginPage() {
 
       const data = await response.json();
 
-      if (response.ok) {
-  console.log("Response OK received"); // Add this
-  if (data.access_token) {
-  console.log("Login successful, token received");
-
-  // Multi-platform storage logic
-  if (Platform.OS === 'web') {
-    localStorage.setItem('userToken', data.access_token);
-  } else {
-    await SecureStore.setItemAsync('userToken', data.access_token);
-  }
-
-  console.log("Token stored, redirecting...");
-  router.replace('/home'); 
-}
-}
-
-else {
+      if (response.ok && data.access_token) {
+        await signIn(data.access_token); // Use context to store token
+        router.replace('/home'); 
+      } else {
         Alert.alert("Login Failed", data.detail || "Invalid credentials");
       }
     } catch (err) {
-      Alert.alert("Error", "Could not connect to the server.");
+      Alert.alert("Error", "Server connection failed.");
     } finally {
       setLoading(false);
     }

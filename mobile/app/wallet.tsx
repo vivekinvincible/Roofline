@@ -1,150 +1,209 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Share } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import RooflineLayout from '@/components/RooflineLayout';
 import { PropertyList } from '@/components/PropertyList';
 
+interface EligibilityMetrics {
+  dti_ratio: number;
+  is_dti_healthy: boolean;
+  stress_test_monthly: number;
+  repayment_capacity: number;
+}
+
+interface EligibilityResponse {
+  max_price: number;
+  loan_limit: number;
+  closing_costs: number;
+  metrics: EligibilityMetrics;
+}
+
 export default function WalletPage() {
   const [country, setCountry] = useState<'ireland' | 'spain'>('ireland');
-  const [monthlyGross, setMonthlyGross] = useState('');
-  const [monthlySpending, setMonthlySpending] = useState('');
-  const [annualCosts, setAnnualCosts] = useState('');
-  const [totalSavings, setTotalSavings] = useState('');
+  const [monthlyGross, setMonthlyGross] = useState('5000');
+  const [monthlyDebt, setMonthlyDebt] = useState('350'); // Example: PCP or Loan
+  const [currentRent, setCurrentRent] = useState('1200');
+  const [monthlySavings, setMonthlySavings] = useState('500');
+  const [totalSavings, setTotalSavings] = useState('65000');
 
-  // Use null as the initial state to distinguish between "not calculated" and "zero"
-  const [maxPrice, setMaxPrice] = useState<number | null>(null);
-  const [loanLimit, setLoanLimit] = useState<number | null>(null);
-  const [taxes, setTaxes] = useState<number | null>(null);
-  const [netDisposable, setNetDisposable] = useState<number | null>(null);
+  const [results, setResults] = useState<EligibilityResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [checklist, setChecklist] = useState({
+    noOverdraft: true,
+    noGambling: true,
+    savingsConsistent: false,
+    idValid: true
+  });
+
+  const fetchEligibility = useCallback(async () => {
+    if (!monthlyGross || !totalSavings) return;
+    setLoading(true);
+    try {
+      const response = await fetch('http://192.168.1.13:8000/calculate-eligibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          country,
+          monthly_gross: parseFloat(monthlyGross) || 0,
+          monthly_debt: parseFloat(monthlyDebt) || 0,
+          current_rent: parseFloat(currentRent) || 0,
+          monthly_savings: parseFloat(monthlySavings) || 0,
+          total_savings: parseFloat(totalSavings) || 0,
+        }),
+      });
+      const data = await response.json();
+      if (response.ok) setResults(data);
+    } catch (error) {
+      console.error("Eligibility API Error:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [country, monthlyGross, monthlyDebt, currentRent, monthlySavings, totalSavings]);
 
   useEffect(() => {
-    handleCalculate();
-  }, [country, monthlyGross, monthlySpending, annualCosts, totalSavings]);
+    const delayDebounceFn = setTimeout(() => fetchEligibility(), 500);
+    return () => clearTimeout(delayDebounceFn);
+  }, [fetchEligibility]);
 
-  const handleCalculate = () => {
-    // Check if we have the bare minimum to calculate
-    if (!monthlyGross && !totalSavings) {
-      setMaxPrice(null);
-      setLoanLimit(null);
-      setTaxes(null);
-      setNetDisposable(null);
-      return;
-    }
+  const formatCurrency = (val: number | undefined) => 
+    val ? `€${Math.round(val).toLocaleString()}` : '€0';
 
-    const mGross = parseFloat(monthlyGross) || 0;
-    const mSpend = parseFloat(monthlySpending) || 0;
-    const aCosts = parseFloat(annualCosts) || 0;
-    const savings = parseFloat(totalSavings) || 0;
+  // Logic to show how much "Buying Power" the loan is eating
+  const debtPenalty = (parseFloat(monthlyDebt) || 0) * (country === 'ireland' ? 12 * 4 : 180);
 
-    // Effective Annual Income for Lending
-    const effectiveAnnualGross = (mGross * 12) - aCosts;
-    const estimatedNetMonthly = mGross * 0.75; 
-
-    let mortgageCapacity = 0;
-    let taxRate = 0;
-    let fixedFees = 0;
-
-    if (country === 'ireland') {
-      mortgageCapacity = effectiveAnnualGross * 4;
-      taxRate = 0.01; 
-      fixedFees = 2500; 
-    } else {
-      const maxMonthlyPayment = (estimatedNetMonthly - mSpend) * 0.35;
-      mortgageCapacity = maxMonthlyPayment * 200; 
-      taxRate = 0.12; 
-      fixedFees = 1500;
-    }
-
-    const rawBuyingPower = (mortgageCapacity + savings - fixedFees) / (1 + taxRate);
-    
-    setLoanLimit(mortgageCapacity);
-    setTaxes(rawBuyingPower * taxRate + fixedFees);
-    setMaxPrice(rawBuyingPower > 0 ? rawBuyingPower : 0);
-    setNetDisposable(estimatedNetMonthly - mSpend);
-  };
-
-  // UX Helper: Renders a dash or placeholder if the value is null
-  const formatValue = (v: number | null, isCurrency = true) => {
-    if (v === null) return '--';
-    if (!isCurrency) return Math.round(v).toLocaleString();
-    return `€${Math.round(v).toLocaleString()}`;
+  const handleShare = async () => {
+    if (!results) return;
+    await Share.share({
+      message: `Hassle-Free Buying Power: ${formatCurrency(results.max_price)} in ${country}. DTI: ${results.metrics.dti_ratio}%.`
+    });
   };
 
   return (
     <RooflineLayout>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Buying Power Engine</Text>
-        <Text style={styles.subtitle}>Factor in loans, spending, and local taxes</Text>
+        <View style={styles.header}>
+          <Text style={styles.title}>Buyer Roadmap</Text>
+          <Text style={styles.subtitle}>Verified buying power & mortgage readiness checklist.</Text>
+        </View>
 
-        <View style={styles.row}>
-          {/* Detailed Inputs */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Monthly Cashflow</Text>
-            
-            <Text style={styles.inputLabel}>Monthly Gross Income (€)</Text>
-            <TextInput style={styles.input} keyboardType="numeric" value={monthlyGross} onChangeText={setMonthlyGross} placeholder="e.g. 5000" />
-            
-            <Text style={styles.inputLabel}>Monthly Spending (€)</Text>
-            <TextInput style={styles.input} keyboardType="numeric" value={monthlySpending} onChangeText={setMonthlySpending} placeholder="Rent, food, car loans..." />
+        <View style={styles.mainGrid}>
+          {/* LEFT COLUMN: INPUTS & READINESS */}
+          <View style={styles.column}>
+            <View style={styles.inputCard}>
+              <View style={styles.switchRow}>
+                <TouchableOpacity onPress={() => setCountry('ireland')} style={[styles.switchBtn, country === 'ireland' && styles.activeBtn]}>
+                  <Text style={country === 'ireland' ? styles.activeText : styles.inactiveText}>🇮🇪 Ireland</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setCountry('spain')} style={[styles.switchBtn, country === 'spain' && styles.activeBtn]}>
+                  <Text style={country === 'spain' ? styles.activeText : styles.inactiveText}>🇪🇸 Spain</Text>
+                </TouchableOpacity>
+              </View>
 
-            <Text style={styles.inputLabel}>Annual Fixed Costs (€)</Text>
-            <TextInput style={styles.input} keyboardType="numeric" value={annualCosts} onChangeText={setAnnualCosts} placeholder="Insurance, taxes, holidays..." />
+              <Text style={styles.label}>Monthly Gross Income</Text>
+              <TextInput style={styles.input} keyboardType="numeric" value={monthlyGross} onChangeText={setMonthlyGross} />
 
-            <Text style={styles.inputLabel}>Total Savings / Deposit (€)</Text>
-            <TextInput style={styles.input} keyboardType="numeric" value={totalSavings} onChangeText={setTotalSavings} placeholder="e.g. 60000" />
+              <Text style={styles.label}>Existing Loans / PCP (Monthly)</Text>
+              <TextInput style={[styles.input, parseFloat(monthlyDebt) > 0 && styles.inputWarning]} keyboardType="numeric" value={monthlyDebt} onChangeText={setMonthlyDebt} />
 
-            <View style={styles.switchRow}>
-              <TouchableOpacity onPress={() => setCountry('ireland')} style={[styles.switchButton, country === 'ireland' && styles.switchActive]}>
-                <Text style={country === 'ireland' ? styles.switchActiveText : styles.switchText}>Ireland</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setCountry('spain')} style={[styles.switchButton, country === 'spain' && styles.switchActive]}>
-                <Text style={country === 'spain' ? styles.switchActiveText : styles.switchText}>Spain</Text>
-              </TouchableOpacity>
+              <View style={styles.dualInputRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>Current Rent</Text>
+                  <TextInput style={styles.input} keyboardType="numeric" value={currentRent} onChangeText={setCurrentRent} />
+                </View>
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={styles.label}>Savings /mo</Text>
+                  <TextInput style={styles.input} keyboardType="numeric" value={monthlySavings} onChangeText={setMonthlySavings} />
+                </View>
+              </View>
+
+              <Text style={styles.label}>Total Deposit Cash</Text>
+              <TextInput style={styles.input} keyboardType="numeric" value={totalSavings} onChangeText={setTotalSavings} />
+            </View>
+
+            <View style={styles.checklistCard}>
+              <Text style={styles.cardTitle}>Bank Readiness (6mo)</Text>
+              {Object.keys(checklist).map((key) => (
+                <TouchableOpacity key={key} style={styles.checkRow} onPress={() => setChecklist(prev => ({...prev, [key]: !prev[key as keyof typeof checklist]}))}>
+                  <Ionicons name={checklist[key as keyof typeof checklist] ? "checkmark-circle" : "ellipse-outline"} size={20} color={checklist[key as keyof typeof checklist] ? "#10B981" : "#CBD5E1"} />
+                  <Text style={styles.checkText}>{key.replace(/([A-Z])/g, ' $1').trim()}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
 
-          {/* Loan Capability Card */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Loan Eligibility</Text>
-            <Text style={[styles.largeValue, !maxPrice && { color: '#9CA3AF' }]}>
-                {formatValue(maxPrice)}
-            </Text>
-            
-            <View style={styles.breakdownRow}>
-              <View style={styles.breakdownBox}>
-                <Text style={styles.breakdownLabel}>EST. MORTGAGE</Text>
-                <Text style={styles.breakdownValue}>{formatValue(loanLimit)}</Text>
+          {/* RIGHT COLUMN: ELIGIBILITY & DEBT IMPACT */}
+          <View style={styles.column}>
+            <View style={styles.resultsCard}>
+              <View style={styles.priceHeader}>
+                <Text style={styles.resultsTitle}>ESTIMATED BUYING POWER</Text>
+                {loading && <ActivityIndicator color="#6366F1" size="small" />}
               </View>
-              <View style={styles.breakdownBox}>
-                <Text style={styles.breakdownLabel}>FEES & TAXES</Text>
-                <Text style={[styles.breakdownValue, { color: taxes ? '#EF4444' : '#6B7280' }]}>
-                    {taxes ? `-${formatValue(taxes)}` : '--'}
-                </Text>
+              
+              <Text style={styles.mainPrice}>{formatCurrency(results?.max_price)}</Text>
+              
+              <View style={styles.statGrid}>
+                <View style={styles.statBox}>
+                  <Text style={styles.statLabel}>LOAN LIMIT</Text>
+                  <Text style={styles.statValue}>{formatCurrency(results?.loan_limit)}</Text>
+                </View>
+                <View style={styles.statBox}>
+                  <Text style={styles.statLabel}>FEES/TAXES</Text>
+                  <Text style={[styles.statValue, { color: '#F87171' }]}>-{formatCurrency(results?.closing_costs)}</Text>
+                </View>
               </View>
+
+              {/* LOAN IMPACT SECTION */}
+              {parseFloat(monthlyDebt) > 0 && (
+                <View style={styles.debtImpactBox}>
+                  <Ionicons name="alert-circle" size={18} color="#FBBF24" />
+                  <View style={{ flex: 1, marginLeft: 8 }}>
+                    <Text style={styles.debtImpactTitle}>Debt Penalty: -{formatCurrency(debtPenalty)}</Text>
+                    <Text style={styles.debtImpactText}>Your PCP/Loans reduce your total house budget by this amount.</Text>
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.divider} />
+
+              <View style={styles.metricRow}>
+                <Ionicons name="speedometer-outline" size={22} color={results?.metrics.is_dti_healthy ? "#10B981" : "#FBBF24"} />
+                <View style={styles.metricText}>
+                  <Text style={styles.metricLabel}>DTI Ratio: {results?.metrics.dti_ratio}%</Text>
+                  <Text style={styles.metricSub}>{results?.metrics.is_dti_healthy ? "Healthy borrowing levels." : "High debt. Approval may be difficult."}</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
+                <Text style={styles.shareBtnText}>Share Eligibility Certificate</Text>
+                <Ionicons name="share-outline" size={18} color="#FFF" style={{ marginLeft: 8 }} />
+              </TouchableOpacity>
             </View>
 
-            <View style={[
-                styles.infoBox, 
-                { backgroundColor: maxPrice === null ? '#F3F4F6' : (netDisposable || 0) > 500 ? '#F0FDF4' : '#FEF2F2' }
-            ]}>
-              <Text style={[
-                  styles.infoBoxTitle, 
-                  { color: maxPrice === null ? '#6B7280' : (netDisposable || 0) > 500 ? '#166534' : '#991B1B' }
-              ]}>
-                Post-Mortgage Surplus
-              </Text>
-              <Text style={styles.infoBoxText}>{formatValue(netDisposable)} /mo</Text>
+            {/* REPAYMENT CAPACITY VISUAL */}
+            <View style={styles.trendCard}>
+              <Text style={styles.cardTitle}>Proven Repayment Capacity</Text>
+              <View style={styles.chartArea}>
+                 <View style={styles.chartBarGroup}>
+                    <View style={[styles.bar, { height: 80, backgroundColor: '#6366F1' }]} />
+                    <Text style={styles.barLabel}>Rent+Save</Text>
+                    <Text style={styles.barValue}>{formatCurrency(results?.metrics.repayment_capacity)}</Text>
+                 </View>
+                 <Ionicons name="arrow-forward" size={20} color="#CBD5E1" style={{ marginBottom: 25 }} />
+                 <View style={styles.chartBarGroup}>
+                    <View style={[styles.bar, { height: 65, backgroundColor: '#0F172A' }]} />
+                    <Text style={styles.barLabel}>Mortgage</Text>
+                    <Text style={styles.barValue}>{formatCurrency((results?.loan_limit || 0) / 240)}</Text>
+                 </View>
+              </View>
+              <Text style={styles.chartHint}>If Rent+Save is higher than Mortgage, banks see you as "Low Risk".</Text>
             </View>
           </View>
         </View>
 
-        {/* Only show matches when we have a valid maxPrice */}
-        {maxPrice !== null && maxPrice > 0 && (
-          <View style={styles.matchSection}>
-            <View style={styles.matchHeader}>
-              <Text style={styles.matchTitle}>Verified Matches</Text>
-              <Text style={styles.matchSubtitle}>Properties within your calculated loan capacity</Text>
-            </View>
-            <PropertyList country={country === 'ireland' ? 'IE' : 'ES'} maxPrice={maxPrice} />
+        {results && results.max_price > 0 && (
+          <View style={styles.propertySection}>
+            <Text style={styles.sectionTitle}>Verified Matches for your Budget</Text>
+            <PropertyList country={country === 'ireland' ? 'IE' : 'ES'} maxPrice={results.max_price} />
           </View>
         )}
       </ScrollView>
@@ -153,29 +212,63 @@ export default function WalletPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, alignItems: 'center', paddingBottom: 60 },
-  title: { fontSize: 30, fontWeight: '800', marginTop: 10, color: '#111827' },
-  subtitle: { fontSize: 15, color: '#6B7280', marginBottom: 30 },
-  row: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 15 },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 20, width: 350, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
-  cardTitle: { fontSize: 17, fontWeight: '700', marginBottom: 15, color: '#374151' },
-  inputLabel: { fontSize: 12, fontWeight: '600', color: '#6B7280', marginTop: 10, marginBottom: 4 },
-  input: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, padding: 10, fontSize: 15 },
-  largeValue: { fontSize: 32, fontWeight: '800', marginBottom: 15, color: '#4F46E5' },
-  breakdownRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
-  breakdownBox: { backgroundColor: '#F3F4F6', borderRadius: 8, padding: 10, flex: 1 },
-  breakdownLabel: { fontSize: 9, color: '#6B7280', fontWeight: '700', marginBottom: 2 },
-  breakdownValue: { fontSize: 13, fontWeight: '700' },
-  infoBox: { marginTop: 15, padding: 10, borderRadius: 8 },
-  infoBoxTitle: { fontSize: 11, fontWeight: '700', marginBottom: 2 },
-  infoBoxText: { fontSize: 15, fontWeight: '700' },
-  switchRow: { flexDirection: 'row', marginTop: 20, borderRadius: 8, backgroundColor: '#F3F4F6', padding: 3 },
-  switchButton: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 6 },
-  switchActive: { backgroundColor: '#4F46E5' },
-  switchText: { color: '#4B5563', fontWeight: '700', fontSize: 13 },
-  switchActiveText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  matchSection: { width: '100%', maxWidth: 800, marginTop: 40 },
-  matchHeader: { marginBottom: 20, paddingHorizontal: 10 },
-  matchTitle: { fontSize: 22, fontWeight: '800', color: '#111827' },
-  matchSubtitle: { fontSize: 13, color: '#6B7280' },
+  container: { padding: 20, paddingBottom: 100, backgroundColor: '#F8FAFC' },
+  header: { marginBottom: 30, alignItems: 'center' },
+  title: { fontSize: 28, fontWeight: '900', color: '#0F172A' },
+  subtitle: { fontSize: 14, color: '#64748B', textAlign: 'center', marginTop: 8 },
+  mainGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 20, justifyContent: 'center' },
+  column: { width: '100%', maxWidth: 420, gap: 20 },
+  
+  // Input Styles
+  inputCard: { backgroundColor: '#FFF', padding: 24, borderRadius: 24, borderWidth: 1, borderColor: '#E2E8F0' },
+  label: { fontSize: 11, fontWeight: '800', color: '#64748B', marginTop: 14, marginBottom: 6, textTransform: 'uppercase' },
+  input: { backgroundColor: '#F1F5F9', padding: 12, borderRadius: 12, fontSize: 16, fontWeight: '600', color: '#0F172A' },
+  inputWarning: { borderLeftWidth: 4, borderLeftColor: '#FBBF24' },
+  dualInputRow: { flexDirection: 'row' },
+  
+  switchRow: { flexDirection: 'row', backgroundColor: '#F1F5F9', padding: 4, borderRadius: 14, marginBottom: 10 },
+  switchBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 11 },
+  activeBtn: { backgroundColor: '#FFF', elevation: 3, shadowOpacity: 0.1 },
+  activeText: { fontWeight: '800', color: '#0F172A' },
+  inactiveText: { fontWeight: '600', color: '#94A3B8' },
+
+  // Results Styles
+  resultsCard: { backgroundColor: '#0F172A', padding: 28, borderRadius: 24 },
+  mainPrice: { color: '#FFF', fontSize: 42, fontWeight: '900', marginVertical: 10 },
+  resultsTitle: { color: '#6366F1', fontSize: 10, fontWeight: '900', letterSpacing: 1.5 },
+  priceHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  statGrid: { flexDirection: 'row', gap: 10 },
+  statBox: { flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 12 },
+  statLabel: { color: '#94A3B8', fontSize: 9, fontWeight: '800' },
+  statValue: { color: '#FFF', fontSize: 15, fontWeight: '700' },
+  
+  debtImpactBox: { backgroundColor: 'rgba(251, 191, 36, 0.1)', padding: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center', marginTop: 15 },
+  debtImpactTitle: { color: '#FBBF24', fontSize: 12, fontWeight: '800' },
+  debtImpactText: { color: '#94A3B8', fontSize: 11 },
+
+  divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 20 },
+  metricRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  metricText: { flex: 1 },
+  metricLabel: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+  metricSub: { color: '#94A3B8', fontSize: 12 },
+
+  shareBtn: { backgroundColor: '#6366F1', padding: 16, borderRadius: 14, marginTop: 20, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  shareBtnText: { color: '#FFF', fontWeight: '800', fontSize: 14 },
+
+  // Visual Roadmap
+  checklistCard: { backgroundColor: '#FFF', padding: 24, borderRadius: 24, borderWidth: 1, borderColor: '#E2E8F0' },
+  cardTitle: { fontSize: 16, fontWeight: '800', color: '#1E293B', marginBottom: 15 },
+  checkRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 10 },
+  checkText: { fontSize: 14, fontWeight: '600', color: '#475569' },
+
+  trendCard: { backgroundColor: '#FFF', padding: 24, borderRadius: 24, borderWidth: 1, borderColor: '#E2E8F0' },
+  chartArea: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', height: 140, paddingVertical: 10 },
+  chartBarGroup: { alignItems: 'center', width: 80 },
+  bar: { width: 40, borderRadius: 8, marginBottom: 8 },
+  barLabel: { fontSize: 10, fontWeight: '800', color: '#64748B' },
+  barValue: { fontSize: 12, fontWeight: '700', color: '#0F172A' },
+  chartHint: { fontSize: 11, color: '#94A3B8', textAlign: 'center', marginTop: 10, lineHeight: 16 },
+
+  propertySection: { marginTop: 40, width: '100%' },
+  sectionTitle: { fontSize: 22, fontWeight: '900', color: '#0F172A', textAlign: 'center', marginBottom: 20 }
 });
