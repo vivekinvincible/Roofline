@@ -5,11 +5,12 @@ import {
   StyleSheet, 
   TextInput, 
   TouchableOpacity, 
-  ScrollView,
-  Dimensions,
-  Platform
+  Dimensions, 
+  Platform 
 } from 'react-native';
+import { useAuth } from '@/context/AuthContext';
 import RooflineLayoutSignout from '@/components/RooflineLayoutSignout';
+import RooflineLayout from '@/components/RooflineLayout';
 import { PropertyList } from '@/components/PropertyList'; 
 import { Ionicons } from '@expo/vector-icons';
 
@@ -17,20 +18,27 @@ const { width } = Dimensions.get('window');
 const isMobile = width < 768;
 
 export default function LandingPage() {
+  const { userToken } = useAuth();
+  
   // --- STATE FOR FILTERING ---
   const [selectedCountry, setSelectedCountry] = useState('IE');
-  const [searchText, setSearchText] = useState(''); // Tracks typing
-  const [appliedSearch, setAppliedSearch] = useState(''); // Tracks "Discover" clicks
+  const [searchText, setSearchText] = useState(''); 
+  const [appliedSearch, setAppliedSearch] = useState('');
 
   // --- HANDLE SEARCH ACTION ---
   const handleSearch = () => {
-    console.log("Searching for:", searchText);
-    setAppliedSearch(searchText); // This triggers the PropertyList update
+    setAppliedSearch(searchText);
   };
 
+  // Choose layout based on Auth state
+  const Layout = userToken ? RooflineLayout : RooflineLayoutSignout;
+
   return (
-    <RooflineLayoutSignout>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+    <Layout>
+      {/* NOTE: ScrollView removed here. 
+        RooflineLayout already contains a ScrollView to handle global scrolling.
+      */}
+      <View style={styles.container}>
         
         {/* --- HERO SECTION --- */}
         <View style={styles.heroSection}>
@@ -43,7 +51,7 @@ export default function LandingPage() {
             and securely store your documents for a one-click application.
           </Text>
 
-          {/* Search Bar - UPDATED */}
+          {/* Search Bar */}
           <View style={styles.searchContainer}>
             <TextInput 
               style={styles.searchInput}
@@ -51,7 +59,7 @@ export default function LandingPage() {
               placeholderTextColor="#9CA3AF"
               value={searchText}
               onChangeText={setSearchText}
-              onSubmitEditing={handleSearch} // Trigger on "Enter" key
+              onSubmitEditing={handleSearch}
             />
             <TouchableOpacity 
               style={styles.searchButton} 
@@ -91,15 +99,13 @@ export default function LandingPage() {
             </Text>
           </View>
           
-          {/* UPDATED: Passing searchQuery to the component */}
           <PropertyList 
             country={selectedCountry} 
             searchQuery={appliedSearch} 
           />
         </View>
 
-        {/* ... Rest of your code (Market Intelligence, Features) remains the same ... */}
-        
+        {/* --- MARKET INTELLIGENCE --- */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Market Intelligence</Text>
           <Text style={styles.sectionDescription}>
@@ -150,6 +156,7 @@ export default function LandingPage() {
           </View>
         </View>
 
+        {/* --- FEATURES SECTION --- */}
         <View style={styles.featuresRow}>
           <View style={styles.featureItem}>
             <View style={[styles.featureIcon, { backgroundColor: '#DBEAFE' }]}>
@@ -167,12 +174,10 @@ export default function LandingPage() {
             <Text style={styles.featureText}>Instant connection to verified agents in Dublin, Barcelona, Marbella, or Cork.</Text>
           </View>
         </View>
-      </ScrollView>
-    </RooflineLayoutSignout>
+      </View>
+    </Layout>
   );
 }
-
-// ... Styles remain the same ...
 
 const styles = StyleSheet.create({
   container: {
@@ -184,7 +189,7 @@ const styles = StyleSheet.create({
     paddingTop: isMobile ? 60 : 100,
     paddingBottom: 40,
     paddingHorizontal: 20,
-    backgroundColor: '#F8FAFC', // Soft background for the hero
+    backgroundColor: '#F8FAFC',
   },
   heroTitle: {
     fontSize: isMobile ? 36 : 56,
@@ -237,8 +242,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 15,
   },
-  
-  // --- TABS STYLING ---
   tabContainer: {
     flexDirection: 'row',
     marginTop: 30,
@@ -260,8 +263,6 @@ const styles = StyleSheet.create({
   activeTabText: {
     color: '#FFF',
   },
-
-  // --- RESULTS SECTION ---
   resultsSection: {
     paddingHorizontal: isMobile ? 20 : 60,
     marginTop: 40,
@@ -269,7 +270,6 @@ const styles = StyleSheet.create({
   sectionHeaderInside: {
     marginBottom: 20,
   },
-
   sectionHeader: {
     paddingHorizontal: isMobile ? 20 : 60,
     marginTop: 80,

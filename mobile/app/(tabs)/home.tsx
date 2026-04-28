@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable } from 'react-native';
-import RooflineLayout from '../components/RooflineLayout';
-import { PropertyList } from '../components/PropertyList';
+import RooflineLayout from '@/components/RooflineLayout';
+import { PropertyList } from '@/components/PropertyList';
 
 export default function Home() {
   const [activeCountry, setActiveCountry] = useState<'IE' | 'ES'>('IE');

@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { useRouter, useSegments } from 'expo-router';
 
 interface AuthContextType {
   userToken: string | null;
@@ -15,8 +14,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userToken, setUserToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
-  const segments = useSegments();
 
   useEffect(() => {
     const loadToken = async () => {
@@ -31,41 +28,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {
         console.error("Failed to load token", e);
       } finally {
+        // This ensures the "Auth Guard" in _layout.tsx knows when it's safe to check the token
         setIsLoading(false);
       }
     };
     loadToken();
   }, []);
 
-  // Route Guard Logic
-  useEffect(() => {
-    if (isLoading) return;
-
-    const inAuthGroup = segments[0] === 'home' || segments[0] === 'wallet' || segments[0] === 'modal';
-
-    if (!userToken && inAuthGroup) {
-      // If user tries to access private routes without a token, boot them to landing
-      router.replace('/');
-    }
-  }, [userToken, segments, isLoading]);
-
   const signIn = async (token: string) => {
-    setUserToken(token);
     if (Platform.OS === 'web') {
       localStorage.setItem('userToken', token);
     } else {
       await SecureStore.setItemAsync('userToken', token);
     }
+    setUserToken(token);
   };
 
   const signOut = async () => {
-    setUserToken(null);
     if (Platform.OS === 'web') {
       localStorage.removeItem('userToken');
     } else {
       await SecureStore.deleteItemAsync('userToken');
     }
-    router.replace('/');
+    setUserToken(null);
   };
 
   return (

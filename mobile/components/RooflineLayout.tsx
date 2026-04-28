@@ -11,30 +11,30 @@ import {
   Platform,
   Modal
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 const isMobile = width < 768;
 
 const RooflineLayout = ({ children }: { children: React.ReactNode }) => {
-  const { signOut, userToken } = useAuth(); // Get auth state
+  const { signOut, userToken } = useAuth();
   const router = useRouter();
+  const pathname = usePathname(); // Get current active route
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const navigateTo = (path: any) => {
+  const navigateTo = (path: string) => {
     setIsMenuOpen(false);
-    router.push(path);
+    router.push(path as any);
   };
+
+  // Logic to determine if a link is active
+  const isActive = (path: string) => pathname === path;
 
   return (
     <SafeAreaView style={styles.container}>
       {/* --- MOBILE MENU OVERLAY --- */}
-      <Modal
-        visible={isMenuOpen}
-        animationType="fade"
-        transparent={false}
-      >
+      <Modal visible={isMenuOpen} animationType="fade" transparent={false}>
         <SafeAreaView style={styles.mobileMenuContainer}>
           <View style={styles.menuHeader}>
             <TouchableOpacity onPress={() => setIsMenuOpen(false)}>
@@ -43,22 +43,29 @@ const RooflineLayout = ({ children }: { children: React.ReactNode }) => {
           </View>
           
           <View style={styles.menuLinks}>
-            <TouchableOpacity style={styles.menuLinkItem} onPress={() => navigateTo('/')}>
-              <Text style={styles.menuLinkText}>Home</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuLinkItem} onPress={() => navigateTo('/')}>
-              <Text style={styles.menuLinkText}>Messages</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuLinkItem} onPress={() => navigateTo('/wallet')}>
-              <Text style={styles.menuLinkText}>Wallet</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuLinkItem} onPress={() => navigateTo('/modal')}>
-              <Text style={styles.menuLinkText}>Secure Vault</Text>
-            </TouchableOpacity>
+            {[
+              { name: 'Home', path: '/home' },
+              { name: 'Messages', path: '/messages' },
+              { name: 'Wallet', path: '/wallet' },
+              { name: 'Secure Vault', path: '/modal' },
+            ].map((item) => (
+              <TouchableOpacity 
+                key={item.path} 
+                style={styles.menuLinkItem} 
+                onPress={() => navigateTo(item.path)}
+              >
+                <Text style={[
+                  styles.menuLinkText, 
+                  isActive(item.path) && styles.activeMenuLinkText
+                ]}>
+                  {item.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
           <View style={styles.menuAuthSection}>
-            <TouchableOpacity style={styles.mobileProfileBtn} onPress={() => navigateTo('/profile')}>
+            <TouchableOpacity style={styles.mobileProfileBtn} onPress={() => navigateTo('/home')}>
               <Ionicons name="person-circle-outline" size={24} color="#FFF" />
               <Text style={styles.mobileProfileText}>My Profile</Text>
             </TouchableOpacity>
@@ -66,40 +73,40 @@ const RooflineLayout = ({ children }: { children: React.ReactNode }) => {
         </SafeAreaView>
       </Modal>
 
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent} 
-        stickyHeaderIndices={[0]}
-        showsVerticalScrollIndicator={false}
-      >
-        
-        {/* --- HEADER --- */}
-        <View style={styles.header}>
-        {/* Logo Section */}
+      {/* --- FIXED HEADER --- */}
+      <View style={styles.header}>
         <TouchableOpacity style={styles.logoContainer} onPress={() => router.push('/home')}>
-           <View style={styles.logoIcon}><Text style={styles.logoTextR}>R</Text></View>
-           <Text style={styles.logoText}>roofline</Text>
+          <View style={styles.logoIcon}><Text style={styles.logoTextR}>R</Text></View>
+          <Text style={styles.logoText}>roofline</Text>
         </TouchableOpacity>
 
-          {/* Navigation Links - Only show if userToken exists */}
+        {/* Navigation Links - Desktop Only */}
         {!isMobile && userToken && (
-            <View style={styles.centerNav}>
-              <TouchableOpacity onPress={() => router.push('/home')}>
-                <Text style={styles.navItem}>Home</Text>
+          <View style={styles.centerNav}>
+            {[
+              { name: 'Home', path: '/home' },
+              { name: 'Messages', path: '/messages' },
+              { name: 'Wallet', path: '/wallet' },
+              { name: 'Secure Vault', path: '/modal' },
+            ].map((item) => (
+              <TouchableOpacity key={item.path} onPress={() => router.push(item.path as any)}>
+                <View style={styles.navItemContainer}>
+                  <Text style={[styles.navItem, isActive(item.path) && styles.activeNavItem]}>
+                    {item.name}
+                  </Text>
+                  {isActive(item.path) && <View style={styles.activeIndicator} />}
+                </View>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => router.push('/home')}>
-                <Text style={styles.navItem}>Message</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => router.push('/wallet')}>
-                <Text style={styles.navItem}>Wallet</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => router.push('/modal')}>
-                <Text style={styles.navItem}>Secure Vault</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+            ))}
+          </View>
+        )}
 
-          <View style={styles.rightSection}>
-          {userToken ? (
+        <View style={styles.rightSection}>
+          {isMobile ? (
+            <TouchableOpacity onPress={() => setIsMenuOpen(true)}>
+              <Ionicons name="menu" size={32} color="#0F172A" />
+            </TouchableOpacity>
+          ) : userToken ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
               <TouchableOpacity onPress={signOut}>
                 <Text style={{ color: '#EF4444', fontWeight: '700' }}>Sign Out</Text>
@@ -110,18 +117,22 @@ const RooflineLayout = ({ children }: { children: React.ReactNode }) => {
             </View>
           ) : (
             <TouchableOpacity onPress={() => router.push('/loginpage')}>
-               <Text style={styles.navItem}>Login</Text>
+              <Text style={styles.navItem}>Login</Text>
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-        {/* --- MAIN CONTENT --- */}
+      {/* --- SINGLE GLOBAL SCROLLVIEW --- */}
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.mainContent}>
           {children}
         </View>
 
-        {/* --- CENTERED FOOTER --- */}
+        {/* --- FOOTER --- */}
         <View style={styles.footer}>
           <View style={styles.footerGrid}>
             <View style={styles.footerColumn}>
@@ -153,20 +164,14 @@ const RooflineLayout = ({ children }: { children: React.ReactNode }) => {
             </View>
           </View>
         </View>
-
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  scrollContent: { flexGrow: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -176,162 +181,53 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
-    zIndex: 10,
-    ...Platform.select({
-      web: { position: 'sticky', top: 0 } as any
-    })
+    zIndex: 100,
   },
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  logoContainer: { flexDirection: 'row', alignItems: 'center' },
+  logoIcon: { backgroundColor: '#4F46E5', width: 32, height: 32, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
+  logoTextR: { color: '#FFF', fontWeight: '900', fontSize: 20 },
+  logoText: { fontSize: 22, fontWeight: 'bold', color: '#0F172A' },
+  
+  // Navigation
+  centerNav: { flexDirection: 'row', gap: 30 },
+  navItemContainer: { alignItems: 'center', justifyContent: 'center' },
+  navItem: { fontSize: 14, color: '#64748B', fontWeight: '600' },
+  activeNavItem: { color: '#4F46E5', fontWeight: '800' },
+  activeIndicator: { 
+    position: 'absolute', 
+    bottom: -22, 
+    width: '100%', 
+    height: 3, 
+    backgroundColor: '#4F46E5', 
+    borderTopLeftRadius: 3, 
+    borderTopRightRadius: 3 
   },
-  logoIcon: {
-    backgroundColor: '#4F46E5',
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  logoTextR: {
-    color: '#FFF',
-    fontWeight: '900',
-    fontSize: 20,
-  },
-  logoText: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#0F172A',
-  },
-  centerNav: {
-    flexDirection: 'row',
-    gap: 24,
-  },
-  navItem: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  rightSection: {
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    minWidth: isMobile ? 40 : 60,
-  },
-  profileBtn: {
-    padding: 2,
-  },
-  menuIcon: {
-    padding: 5,
-  },
-  mainContent: {
-    flex: 1,
-    minHeight: 600,
-    backgroundColor: '#FFFFFF',
-  },
-  mobileMenuContainer: {
-    flex: 1,
-    backgroundColor: '#FFF',
-    padding: 25,
-  },
-  menuHeader: {
-    alignItems: 'flex-end',
-    marginBottom: 40,
-  },
-  menuLinks: {
-    flex: 1,
-    gap: 30,
-  },
-  menuLinkItem: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    paddingBottom: 15,
-  },
-  menuLinkText: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  menuAuthSection: {
-    gap: 15,
-    marginBottom: 20,
-  },
-  mobileProfileBtn: {
-    flexDirection: 'row',
-    width: '100%',
-    paddingVertical: 18,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0F172A',
-    gap: 10,
-  },
-  mobileProfileText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  footer: {
-    backgroundColor: '#0F172A',
-    padding: 40,
-    alignItems: 'center',
-  },
-  footerGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    width: '100%',
-  },
-  footerColumn: {
-    width: isMobile ? '100%' : 250,
-    alignItems: 'center',
-    marginBottom: isMobile ? 30 : 0,
-  },
-  footerTitle: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '800',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  footerSubText: {
-    color: '#94A3B8',
-    fontSize: 14,
-    lineHeight: 22,
-    textAlign: 'center',
-  },
-  footerLink: {
-    color: '#94A3B8',
-    fontSize: 14,
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  footerBottom: {
-    marginTop: 40,
-    borderTopWidth: 1,
-    borderTopColor: '#1E293B',
-    paddingTop: 20,
-    flexDirection: isMobile ? 'column' : 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-    gap: 20,
-  },
-  copyright: {
-    color: '#475569',
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  socialRow: {
-    flexDirection: 'row',
-    gap: 20,
-    justifyContent: 'center',
-  },
-  socialLink: {
-    color: '#94A3B8',
-    fontSize: 11,
-    fontWeight: 'bold',
-  }
+
+  rightSection: { minWidth: isMobile ? 40 : 120, alignItems: 'flex-end' },
+  mainContent: { flex: 1, minHeight: 600 },
+
+  // Mobile Menu
+  mobileMenuContainer: { flex: 1, backgroundColor: '#FFF', padding: 25 },
+  menuHeader: { alignItems: 'flex-end', marginBottom: 40 },
+  menuLinks: { flex: 1, gap: 30 },
+  menuLinkItem: { borderBottomWidth: 1, borderBottomColor: '#F1F5F9', paddingBottom: 15 },
+  menuLinkText: { fontSize: 26, fontWeight: '700', color: '#0F172A' },
+  activeMenuLinkText: { color: '#4F46E5' },
+  menuAuthSection: { marginBottom: 20 },
+  mobileProfileBtn: { flexDirection: 'row', width: '100%', paddingVertical: 18, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0F172A', gap: 10 },
+  mobileProfileText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
+
+  // Footer
+  footer: { backgroundColor: '#0F172A', padding: 40, alignItems: 'center' },
+  footerGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', width: '100%' },
+  footerColumn: { width: isMobile ? '100%' : 250, alignItems: 'center', marginBottom: isMobile ? 30 : 0 },
+  footerTitle: { color: '#FFF', fontSize: 16, fontWeight: '800', marginBottom: 15, textAlign: 'center' },
+  footerSubText: { color: '#94A3B8', fontSize: 14, lineHeight: 22, textAlign: 'center' },
+  footerLink: { color: '#94A3B8', fontSize: 14, marginBottom: 10, textAlign: 'center' },
+  footerBottom: { marginTop: 40, borderTopWidth: 1, borderTopColor: '#1E293B', paddingTop: 20, flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', alignItems: 'center', width: '100%', gap: 20 },
+  copyright: { color: '#475569', fontSize: 12, textAlign: 'center' },
+  socialRow: { flexDirection: 'row', gap: 20, justifyContent: 'center' },
+  socialLink: { color: '#94A3B8', fontSize: 11, fontWeight: 'bold' }
 });
 
 export default RooflineLayout;

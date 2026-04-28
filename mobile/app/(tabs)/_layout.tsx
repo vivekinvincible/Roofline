@@ -1,6 +1,5 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
@@ -16,11 +15,15 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
       }}>
+      {/* Change 'index' to 'home' here. 
+         This ensures the Footer Tab bar ONLY appears on /home, not on your / (root) 
+      */}
       <Tabs.Screen
-        name="index"
+        name="home" 
         options={{
           title: 'Home',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarStyle: { display: 'none' }, // <--- THIS HIDES THE FOOTER ON HOME
         }}
       />
       <Tabs.Screen
@@ -28,6 +31,7 @@ export default function TabLayout() {
         options={{
           title: 'Explore',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          tabBarStyle: { display: 'none' }, // <--- THIS HIDES THE FOOTER ON HOME
         }}
       />
     </Tabs>

@@ -80,8 +80,7 @@ export default function WalletPage() {
 
   return (
     <RooflineLayout>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
+      <View style={styles.header}>
           <Text style={styles.title}>Buyer Roadmap</Text>
           <Text style={styles.subtitle}>Verified buying power & mortgage readiness checklist.</Text>
         </View>
@@ -206,8 +205,7 @@ export default function WalletPage() {
             <PropertyList country={country === 'ireland' ? 'IE' : 'ES'} maxPrice={results.max_price} />
           </View>
         )}
-      </ScrollView>
-    </RooflineLayout>
+      </RooflineLayout>
   );
 }
 
