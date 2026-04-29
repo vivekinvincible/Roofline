@@ -47,7 +47,7 @@ const RooflineLayout = ({ children }: { children: React.ReactNode }) => {
               { name: 'Home', path: '/home' },
               { name: 'Messages', path: '/messages' },
               { name: 'Wallet', path: '/wallet' },
-              { name: 'Secure Vault', path: '/modal' },
+              { name: 'Secure Vault', path: '/vault' },
             ].map((item) => (
               <TouchableOpacity 
                 key={item.path} 
@@ -87,7 +87,7 @@ const RooflineLayout = ({ children }: { children: React.ReactNode }) => {
               { name: 'Home', path: '/home' },
               { name: 'Messages', path: '/messages' },
               { name: 'Wallet', path: '/wallet' },
-              { name: 'Secure Vault', path: '/modal' },
+              { name: 'Secure Vault', path: '/vault' },
             ].map((item) => (
               <TouchableOpacity key={item.path} onPress={() => router.push(item.path as any)}>
                 <View style={styles.navItemContainer}>

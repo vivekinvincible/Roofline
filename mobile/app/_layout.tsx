@@ -14,24 +14,23 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
   useEffect(() => {
-    if (isLoading) return;
+  if (isLoading) return;
 
-    // Normalize the segment for the root/index path
-    const currentSegment = segments[0] === undefined || segments[0] === '' ? 'index' : segments[0];
-    
-    // Pages that do NOT require a login
-    const isPublicPage = currentSegment === 'loginpage' || 
-                         currentSegment === 'signinpage' || 
-                         currentSegment === 'index';
+  const currentSegment = segments[0];
+  const isPublicPage = currentSegment === 'loginpage' || 
+                       currentSegment === 'signinpage' || 
+                       currentSegment === undefined || // This is the root index
+                       currentSegment === '';
 
-    if (!userToken && !isPublicPage) {
-      // 1. Kick unauthenticated users out of protected areas
-      router.replace('/loginpage');
-    } else if (userToken && isPublicPage) {
-      // 2. Prevent authenticated users from seeing landing/login/signup
-      router.replace('/home');
-    }
-  }, [userToken, segments, isLoading]);
+  // If logged in and trying to access a public page, go to (tabs)
+  if (userToken && isPublicPage) {
+    router.replace('/(tabs)/home'); 
+  } 
+  // If NOT logged in and trying to access protected areas
+  else if (!userToken && !isPublicPage) {
+    router.replace('/loginpage');
+  }
+}, [userToken, segments, isLoading]);
 
   // --- UX ENHANCEMENT: PREVENT FLICKER ---
   
@@ -65,13 +64,9 @@ function RootLayoutNav() {
         {/* Protected Pages */}
         <Stack.Screen name="home" />
         <Stack.Screen name="wallet" options={{ headerShown: false }} />
+        <Stack.Screen name="vault" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="modal" options={{ 
-            presentation: 'modal', 
-            title: 'Secure Vault', 
-            headerShown: true 
-          }} 
-        />
+        
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
