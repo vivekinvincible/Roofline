@@ -19,7 +19,7 @@ from pydantic import BaseModel
 
 # Ensure tables are created on startup
 print(f"Creating database at: {engine.url}")
-SQLModel.metadata.create_all(engine)
+# SQLModel.metadata.create_all(engine)
 
 app = FastAPI(title="Real Estate Global API")
 
@@ -333,3 +333,40 @@ async def trigger_ingestion(background_tasks: BackgroundTasks):
 
     background_tasks.add_task(run_ingest)
     return {"message": "Ingestion started. Check your terminal for progress."}
+
+
+@app.get("/vault/status/{user_id}")
+def get_vault_status(user_id: int, country: str, db: Session = Depends(get_db)):
+    """
+    Calculates readiness based on your high-impact use cases.
+    """
+    docs = db.exec(select(Document).where(
+        Document.user_id == user_id,
+        Document.country_code == country.upper()
+    )).all()
+
+    # 1. Mortgage Pack Logic (The "Big Three")
+    required_types = ["IDENTITY", "INCOME", "FUNDS"]
+    uploaded_types = [d.doc_type for d in docs]
+    readiness_score = len(set(required_types) & set(
+        uploaded_types)) / len(required_types)
+
+    # 2. Expiry Alert Logic
+    expiring_soon = []
+    three_months_out = datetime.utcnow() + timedelta(days=90)
+    for d in docs:
+        if d.expiry_date and d.expiry_date < three_months_out:
+            expiring_soon.append({"name": d.doc_type, "date": d.expiry_date})
+
+    return {
+        "readiness": round(readiness_score, 2),
+        "docs": docs,
+        "alerts": expiring_soon,
+        "is_mortgage_ready": readiness_score == 1.0
+    }
+
+
+@app.post("/vault/share")
+def share_vault(share_req: dict, db: Session = Depends(get_db)):
+    # Logic to create a temporary encrypted access window
+    return {"message": "Access granted for 48 hours"}

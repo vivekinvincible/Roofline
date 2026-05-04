@@ -29,7 +29,7 @@ load_dotenv(dotenv_path=dotenv_path)
 # 3. IMPORT YOUR MODELS
 # Because of step 1, this "just works" now
 try:
-    from models import SQLModel
+    from models import SQLModel, Document, VaultShare
 except ImportError as e:
     print(f"Current sys.path: {sys.path}")
     raise ImportError(

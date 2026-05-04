@@ -115,3 +115,29 @@ class CountryRule(SQLModel, table=True):
     min_down_payment_pct: float = Field(default=0.10)
     tax_rate_pct: float
     additional_fees_fixed: float = Field(default=0.0)
+
+
+class DocStatus(str, Enum):
+    PENDING = "pending"
+    VERIFIED = "verified"
+    EXPIRED = "expired"
+
+
+class Document(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id")
+    country_code: str  # "IE" or "ES"
+    doc_type: str      # "PASSPORT", "P60", "NIE", "PAYSLIP"
+    file_path: str
+    expiry_date: Optional[datetime] = None
+    status: DocStatus = Field(default=DocStatus.PENDING)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class VaultShare(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id")
+    professional_email: str
+    professional_type: str  # "Solicitor" or "Abogado"
+    expires_at: datetime
+    shared_docs: str  # Comma-separated IDs
